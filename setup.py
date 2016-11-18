@@ -22,5 +22,5 @@ setup(name='genmechanics',
       license='Creative Commons Attribution-Share Alike license',
       packages=['genmechanics'],
       package_dir={'genmechanics':'genmechanics'},
-      install_requires=['numpy','matplotlib','networkx'],
+      install_requires=['numpy','matplotlib','networkx','scipy'],
       classifiers=['Topic :: Scientific/Engineering','Development Status :: 3 - Alpha'])
