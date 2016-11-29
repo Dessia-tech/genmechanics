@@ -6,7 +6,7 @@ Created on Wed Nov 16 13:14:34 2016
 """
 
 from genmechanics import Linkage
-import numpy as npy
+#import numpy as npy
 
 class RevoluteLinkage(Linkage):
     def __init__(self,part1,part2,position,euler_angles,name=''):
