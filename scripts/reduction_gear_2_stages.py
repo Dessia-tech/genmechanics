@@ -16,6 +16,9 @@ C=300
 r1=0.8
 r2=0.7
 
+Ca=0.0008
+Cr=0.0006
+
 ground=genmechanics.Part('ground')
 shaft1=genmechanics.Part('shaft1')
 shaft2=genmechanics.Part('shaft2')
@@ -36,23 +39,32 @@ egs1=genmechanics.geometry.Direction2Euler(*dgs1)
 dgs2=npy.cross(p3b-p2a,p3a-p2a)
 egs2=genmechanics.geometry.Direction2Euler(*dgs2)
 
-bearing1a=linkages.BallLinkage(ground,shaft1,p1a,[0,0,0],'bearing1a')
-bearing1b=linkages.LinearAnnularLinkage(ground,shaft1,p1b,[0,0,0],'bearing1b')
-bearing2a=linkages.BallLinkage(ground,shaft2,p2a,[0,0,0],'bearing2a')
-bearing2b=linkages.LinearAnnularLinkage(ground,shaft2,p2b,[0,0,0],'bearing2b')
-bearing3a=linkages.BallLinkage(ground,shaft3,p3a,[0,0,0],'bearing3a')
-bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],'bearing3b')
+bearing1a=linkages.BallLinkage(ground,shaft1,p1a,[0,0,0],Ca,Cr,'bearing1a')
+bearing1b=linkages.LinearAnnularLinkage(ground,shaft1,p1b,[0,0,0],Cr,'bearing1b')
+bearing2a=linkages.BallLinkage(ground,shaft2,p2a,[0,0,0],Ca,Cr,'bearing2a')
+bearing2b=linkages.LinearAnnularLinkage(ground,shaft2,p2b,[0,0,0],Cr,'bearing2b')
+bearing3a=linkages.BallLinkage(ground,shaft3,p3a,[0,0,0],Ca,Cr,'bearing3a')
+bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,'bearing3b')
 
 
-gearset12=linkages.GearSetLinkage(shaft1,shaft2,pgs1,egs1,'Gear set 2')
-gearset23=linkages.GearSetLinkage(shaft2,shaft3,pgs2,egs2,'Gear set 2')
+gearset12=linkages.FrictionlessGearSetLinkage(shaft1,shaft2,pgs1,egs1,'Gear set 2')
+gearset23=linkages.FrictionlessGearSetLinkage(shaft2,shaft3,pgs2,egs2,'Gear set 2')
 
 mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,bearing3a,bearing3b,gearset12,gearset23],ground)
 
 load1=genmechanics.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
 load2=genmechanics.UnknownMechanicalLoad(shaft3,[L/2,0,0],[0,0,0],[],[0],'output torque')
 
+
 r=mech.StaticAnalysis([load1],[load2])
+#print(r1)
+#for i in range(100):
+#    r2=mech.StaticAnalysis([load1],[load2])
+#    if not npy.allclose(r1,r2):
+#        print('!!')
+#    else:
+#        print('??')
+        
 
 for (l,d),v in r.items():
     print(l.name,d,v)
