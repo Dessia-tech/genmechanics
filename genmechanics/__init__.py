@@ -5,6 +5,6 @@ Created on Wed Nov 16 14:17:10 2016
 @author: steven
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 from .core import *

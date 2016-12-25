@@ -5,17 +5,71 @@ Created on Wed Nov 16 13:14:34 2016
 @author: Steven Masfaraud
 """
 
-from genmechanics import Linkage
 import numpy as npy
 
-class FrictionlessRevoluteLinkage(Linkage):
+
+class Linkage:
+    def __init__(self,part1,part2,position,euler_angles,static_matrix,
+                 static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
+                 static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                 static_require_kinematic,name=''):
+        self.part1=part1
+        self.part2=part2
+        self.position=position
+        self.euler_angles=euler_angles
+        self.name=name        
+        
+        self.static_matrix=static_matrix
+        self.static_behavior_occurence_matrix=static_behavior_occurence_matrix
+        
+        self.static_behavior_nonlinear_eq_indices=static_behavior_nonlinear_eq_indices
+        self.static_behavior_linear_eq=static_behavior_linear_eq
+        self.static_behavior_nonlinear_eq=static_behavior_nonlinear_eq
+        self.static_require_kinematic=static_require_kinematic
+        
+        self.n_static_unknowns=static_matrix.shape[1]
+        
+
+class HolonomicLinkage(Linkage):
+    holonomic=True
+    def __init__(self,part1,part2,position,euler_angles,static_matrix,
+                 static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
+                 static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                 kinematic_matrix,static_require_kinematic=False,name=''):
+        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,
+                         static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
+                         static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                         static_require_kinematic,name)
+        self.kinematic_matrix=kinematic_matrix
+        self.n_kinematic_unknowns=kinematic_matrix.shape[1]
+
+        
+class NonHolonomicLinkage(Linkage):
+    holonomic=False
+    def __init__(self,part1,part2,position,euler_angles,static_matrix,
+                 static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
+                 static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                 kinematic_directions,static_require_kinematic=False,name=''):
+        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,
+                         static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
+                         static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                         static_require_kinematic,name)
+        self.kinematic_directions=kinematic_directions
+
+        
+class FrictionlessRevoluteLinkage(HolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,name=''):
         static_matrix=npy.array([[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,0,1,0],[0,0,0,0,1]])
         static_behavior_occurence_matrix=npy.array([])
         static_behavior_nonlinear_eq_indices=[]
         static_behavior_linear_eq=npy.array([])
         static_behavior_nonlinear_eq=[]
-        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,static_behavior_nonlinear_eq,name)
+        kinematic_matrix=npy.array([[1],[0],[0],[0],[0],[0]])
+        static_require_kinematic=False
+        HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
+                                  static_matrix,static_behavior_occurence_matrix,
+                                  static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,
+                                  static_behavior_nonlinear_eq,kinematic_matrix,static_require_kinematic,name)
 
 #class CylindricalLinkage(Linkage):
 #    def __init__(self,part1,part2,position,euler_angles,name=''):
@@ -29,47 +83,77 @@ class FrictionlessRevoluteLinkage(Linkage):
 #    def __init__(self,part1,part2,position,euler_angles,name=''):
 #        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,static_behavior_occurence_matrix,static_behavior_linear_eq_indices,static_behavior_linear_eq,static_behavior_nonlinear_eq,name)
 #
-class FrictionlessBallLinkage(Linkage):
+
+class FrictionlessBallLinkage(HolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,name=''):
         static_matrix=npy.array([[1,0,0],[0,1,0],[0,0,1],[0,0,0],[0,0,0],[0,0,0]])
         static_behavior_occurence_matrix=npy.array([])
         static_behavior_nonlinear_eq_indices=[]
         static_behavior_linear_eq=npy.array([])
         static_behavior_nonlinear_eq=[]
-        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,static_behavior_nonlinear_eq,name)
+        kinematic_matrix=npy.array([[1,0,0],[0,1,0],[0,0,1],[0,0,0],[0,0,0],[0,0,0]])
+        static_require_kinematic=False
+        HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
+                                  static_matrix,static_behavior_occurence_matrix,
+                                  static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,
+                                  static_behavior_nonlinear_eq,kinematic_matrix,static_require_kinematic,name)
 #
-class FrictionlessLinearAnnularLinkage(Linkage):
+class FrictionlessLinearAnnularLinkage(HolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,name=''):
         static_matrix=npy.array([[0,0],[1,0],[0,1],[0,0],[0,0],[0,0]])
         static_behavior_occurence_matrix=npy.array([])
         static_behavior_nonlinear_eq_indices=[]
         static_behavior_linear_eq=npy.array([])
         static_behavior_nonlinear_eq=[]
-        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,static_behavior_nonlinear_eq,name)
+        kinematic_matrix=npy.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0],[0,0,0,0]])
+        static_require_kinematic=False
+        HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
+                                  static_matrix,static_behavior_occurence_matrix,
+                                  static_behavior_nonlinear_eq_indices,
+                                  static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                                  kinematic_matrix,static_require_kinematic,name)
 
-class FrictionlessGearSetLinkage(Linkage):
+class FrictionlessGearSetLinkage(NonHolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,name=''):
         static_matrix=npy.array([[1],[0],[0],[0],[0],[0]])
         static_behavior_occurence_matrix=npy.array([])
         static_behavior_nonlinear_eq_indices=[]
         static_behavior_linear_eq=npy.array([])
         static_behavior_nonlinear_eq=[]
-        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,static_behavior_nonlinear_eq,name)
+        directions=[npy.array([1,0,0])]
+        static_require_kinematic=False
+        NonHolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
+                                     static_matrix,static_behavior_occurence_matrix,
+                                     static_behavior_nonlinear_eq_indices,
+                                     static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                                     directions,static_require_kinematic,name)
 
-class BallLinkage(Linkage):
+class BallLinkage(HolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,Ca,Cr,name=''):
         static_matrix=npy.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0],[0,0,0,0]])
         static_behavior_occurence_matrix=npy.array([[1,1,1,1]])
         static_behavior_nonlinear_eq_indices=[0]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[lambda x:Ca*x[0]+Cr*(x[1]**2+x[2]**2)**0.5-x[3]]
-        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,static_behavior_nonlinear_eq,name)
+        static_behavior_nonlinear_eq=[lambda x,v:abs(v[0])/v[0]*(Ca*abs(x[0])+Cr*(x[1]**2+x[2]**2)**0.5)+x[3] if v[0]!=0 else 0.]
+        kinematic_matrix=npy.array([[1,0,0],[0,1,0],[0,0,1],[0,0,0],[0,0,0],[0,0,0]])
+        static_require_kinematic=True
+        HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
+                                  static_matrix,static_behavior_occurence_matrix,
+                                  static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,
+                                  static_behavior_nonlinear_eq,kinematic_matrix,
+                                  static_require_kinematic,name)
 
-class LinearAnnularLinkage(Linkage):
+class LinearAnnularLinkage(HolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,Cr,name=''):
         static_matrix=npy.array([[0,0,0],[1,0,0],[0,1,0],[0,0,1],[0,0,0],[0,0,0]])
         static_behavior_occurence_matrix=npy.array([[1,1,1]])
         static_behavior_nonlinear_eq_indices=[0]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[lambda x:Cr*(x[0]**2+x[1]**2)**0.5-x[2]]
-        Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix,static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,static_behavior_nonlinear_eq,name)
+        static_behavior_nonlinear_eq=[lambda x,v:abs(v[0])/v[0]*(Cr*(x[0]**2+x[1]**2)**0.5)+x[2] if v[0]!=0 else 0.]
+        kinematic_matrix=npy.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0],[0,0,0,0]])
+        static_require_kinematic=True
+        HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
+                                  static_matrix,static_behavior_occurence_matrix,
+                                  static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,
+                                  static_behavior_nonlinear_eq,kinematic_matrix,
+                                  static_require_kinematic,name)

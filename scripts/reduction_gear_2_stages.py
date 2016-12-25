@@ -13,6 +13,7 @@ L=0.2
 e1=0.05
 e2=0.07
 C=300
+w=300
 r1=0.8
 r2=0.7
 
@@ -50,23 +51,28 @@ bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,'bearing3b'
 gearset12=linkages.FrictionlessGearSetLinkage(shaft1,shaft2,pgs1,egs1,'Gear set 2')
 gearset23=linkages.FrictionlessGearSetLinkage(shaft2,shaft3,pgs2,egs2,'Gear set 2')
 
-mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,bearing3a,bearing3b,gearset12,gearset23],ground)
-
 load1=genmechanics.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
 load2=genmechanics.UnknownMechanicalLoad(shaft3,[L/2,0,0],[0,0,0],[],[0],'output torque')
 
+imposed_speeds=[(bearing1a,0,w)]
 
-r=mech.StaticAnalysis([load1],[load2])
-#print(r1)
-#for i in range(100):
-#    r2=mech.StaticAnalysis([load1],[load2])
-#    if not npy.allclose(r1,r2):
-#        print('!!')
-#    else:
-#        print('??')
-        
+mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,bearing3a,bearing3b,gearset12,gearset23],ground,imposed_speeds,[load1],[load2])
 
-for (l,d),v in r.items():
-    print(l.name,d,v)
+
+
+for l,lv in mech.static_results.items():
+    for d,v in lv.items():
+        print(l.name,d,v)
 
 print('Cth: ',r1/(1-r1)*r2/(1-r2)*C)
+#print()
+
+#rk=mech.KinematicAnalysis()
+#print(Ca*r[bearing2a,0]+Cr*(r[bearing2a,1]**2+r[bearing2a,2]**2)**0.5,r[bearing2a,3])
+#for (l,d),v in mech.kinematic_results.items():
+#    print(l.name,d,v)
+for l,lv in mech.kinematic_results.items():
+    for d,v in lv.items():
+        print(l.name,d,v)
+
+print('wth: ',(1-r1)/r1*(1-r2)/r2*w)
