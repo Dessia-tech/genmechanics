@@ -6,7 +6,7 @@ Created on Wed Nov 16 13:14:34 2016
 """
 
 import numpy as npy
-
+from math import cos,sin
 
 class Linkage:
     def __init__(self,part1,part2,position,euler_angles,static_matrix,
@@ -114,12 +114,14 @@ class FrictionlessLinearAnnularLinkage(HolonomicLinkage):
                                   kinematic_matrix,static_require_kinematic,name)
 
 class FrictionlessGearSetLinkage(NonHolonomicLinkage):
-    def __init__(self,part1,part2,position,euler_angles,name=''):
-        static_matrix=npy.array([[1],[0],[0],[0],[0],[0]])
-        static_behavior_occurence_matrix=npy.array([])
-        static_behavior_nonlinear_eq_indices=[]
+    def __init__(self,part1,part2,position,euler_angles,alpha,beta,name=''):
+        self.alpha=alpha
+        self.beta=beta
+        static_matrix=npy.array([[cos(beta)*cos(alpha),0],[sin(alpha),0],[0,1],[0,0],[0,0],[0,0]])
+        static_behavior_occurence_matrix=npy.array([[1,1]])
+        static_behavior_nonlinear_eq_indices=[0]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[]
+        static_behavior_nonlinear_eq=[lambda x:abs(sin(alpha)*cos(beta))*x[0]+x[1]]
         directions=[npy.array([1,0,0])]
         static_require_kinematic=False
         NonHolonomicLinkage.__init__(self,part1,part2,position,euler_angles,

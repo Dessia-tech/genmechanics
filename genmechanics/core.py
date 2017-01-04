@@ -243,12 +243,15 @@ class Mechanism:
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_linkage))
 
                 # Collecting non linear equations
-                for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
-                    v=[0]*linkage.n_kinematic_unknowns
-                    for index,value in self.kinematic_results[linkage].items():
-                        v[index]=value
-                    nonlinear_eq[neq+i]=lambda x,v=v,fct=fct:fct(x,v)
-
+                if linkage.holonomic:
+                    for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
+                        v=[0]*linkage.n_kinematic_unknowns
+                        for index,value in self.kinematic_results[linkage].items():
+                            v[index]=value
+                        nonlinear_eq[neq+i]=lambda x,v=v,fct=fct:fct(x,v)
+                else:
+                    for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
+                        nonlinear_eq[neq+i]=fct
                         
                 # Updating counters
                 neq+=neq_linkage
@@ -280,8 +283,7 @@ class Mechanism:
                     try:
                         f1=nonlinear_eq[eq]
                         vars_func=[i for i in range(self.n_sdof) if M[eq,i]]
-                        def f2(x,f1=f1,vars_func=vars_func,variables=variables,q=q):
-                            
+                        def f2(x,f1=f1,vars_func=vars_func,variables=variables,q=q):                    
                             x2=[]
                             for variable in vars_func:
                                 try:

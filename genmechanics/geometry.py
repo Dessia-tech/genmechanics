@@ -44,12 +44,11 @@ def TransferMatrix2Euler(R):
     return(npy.array([psi,theta,phi]))
 
     
-def Direction2Euler(ux,uy,uz):
-    u=npy.array([ux,uy,uz])
+def Direction2Euler(u,v=npy.random.random(3)):
+#    u=npy.array([ux,uy,uz])
     u=u/linalg.norm(u)
     R=npy.zeros((3,3))
     R[:,0]=u
-    v=npy.random.random(3)
     v=v-npy.dot(u,v)*u
     v=v/linalg.norm(v)
     w=npy.cross(u,v)

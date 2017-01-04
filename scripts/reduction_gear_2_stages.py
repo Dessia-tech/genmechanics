@@ -20,6 +20,12 @@ r2=0.7
 Ca=0.0008
 Cr=0.0006
 
+alpha_gs1=18/360*2*3.1415
+beta_gs1=20/360*2*3.1415
+alpha_gs2=-21/360*2*3.1415
+beta_gs2=20/360*2*3.1415
+
+
 ground=genmechanics.Part('ground')
 shaft1=genmechanics.Part('shaft1')
 shaft2=genmechanics.Part('shaft2')
@@ -35,10 +41,12 @@ p3b=npy.array([L,e1+e2,e2])
 pgs1=0.5*(p1a+p1b)*r1+(1-r1)*0.5*(p2a+p2b)
 pgs2=0.5*(p2a+p2b)*r2+(1-r2)*0.5*(p3a+p3b)
 
+dir_axis=npy.array([1,0,0])
+
 dgs1=npy.cross(p1b-p1a,p2a-p1a)
-egs1=genmechanics.geometry.Direction2Euler(*dgs1)
+egs1=genmechanics.geometry.Direction2Euler(dgs1,dir_axis)
 dgs2=npy.cross(p3b-p2a,p3a-p2a)
-egs2=genmechanics.geometry.Direction2Euler(*dgs2)
+egs2=genmechanics.geometry.Direction2Euler(dgs2,dir_axis)
 
 bearing1a=linkages.BallLinkage(ground,shaft1,p1a,[0,0,0],Ca,Cr,'bearing1a')
 bearing1b=linkages.LinearAnnularLinkage(ground,shaft1,p1b,[0,0,0],Cr,'bearing1b')
@@ -48,8 +56,8 @@ bearing3a=linkages.BallLinkage(ground,shaft3,p3a,[0,0,0],Ca,Cr,'bearing3a')
 bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,'bearing3b')
 
 
-gearset12=linkages.FrictionlessGearSetLinkage(shaft1,shaft2,pgs1,egs1,'Gear set 2')
-gearset23=linkages.FrictionlessGearSetLinkage(shaft2,shaft3,pgs2,egs2,'Gear set 2')
+gearset12=linkages.FrictionlessGearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,'Gear set 2')
+gearset23=linkages.FrictionlessGearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,'Gear set 2')
 
 load1=genmechanics.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
 load2=genmechanics.UnknownMechanicalLoad(shaft3,[L/2,0,0],[0,0,0],[],[0],'output torque')
