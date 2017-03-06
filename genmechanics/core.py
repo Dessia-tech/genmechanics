@@ -97,6 +97,73 @@ class Mechanism:
 
     holonomic_graph=property(_get_holonomic_graph)
 
+
+
+    def Speed(self,position,part_ref,part):
+        """
+        Speed from point belonging to part with part_ref as reference
+        """
+        q=self.kinematic_vector#force kdof computation
+        path=nx.shortest_path(self.holonomic_graph,part,part_ref)
+        V=npy.zeros((3,self.n_kdof))
+        for il,linkage2 in enumerate(path):
+            if not linkage2.__class__.__name__=='Part':
+                try:
+                    if path[il+1]==linkage2.part2:
+                        side=1                            
+                    else:
+                        side=-1
+                except IndexError:
+                    # linkage is last element of list
+                    if path[il-1]==linkage2.part1:
+                        side=1     
+                    else:
+                        side=-1
+                # It's really a linkage
+                P=geometry.Euler2TransferMatrix(*linkage2.euler_angles)            
+                u=linkage2.position
+                uprime=u-position
+                L=geometry.CrossProductMatrix(uprime)
+                Ve=npy.dot(L,npy.dot(P,linkage2.kinematic_matrix[:3,:]))+npy.dot(P,linkage2.kinematic_matrix[3:,:])
+                for indof,ndof in enumerate(self.kdof[linkage2]):
+                    V[:,ndof]+=side*Ve[:,indof]        
+                
+                return npy.dot(V,q)
+            
+    def RotationalSpeed(self,position,part_ref,part):
+        """
+        RotationalSpeed from point belonging to part with part_ref as reference
+        """
+        q=self.kinematic_vector#force kdof computation
+        path=nx.shortest_path(self.holonomic_graph,part,part_ref)
+        V=npy.zeros((3,self.n_kdof))
+        for il,linkage2 in enumerate(path):
+            if not linkage2.__class__.__name__=='Part':
+                try:
+                    if path[il+1]==linkage2.part2:
+                        side=1                            
+                    else:
+                        side=-1
+                except IndexError:
+                    # linkage is last element of list
+                    if path[il-1]==linkage2.part1:
+                        side=1     
+                    else:
+                        side=-1
+                # It's really a linkage
+                P=geometry.Euler2TransferMatrix(*linkage2.euler_angles)            
+#                u=linkage2.position
+#                uprime=u-position
+#                L=geometry.CrossProductMatrix(uprime)
+                We=npy.dot(P,linkage2.kinematic_matrix[:3,:])+npy.dot(P,linkage2.kinematic_matrix[3:,:])
+                for indof,ndof in enumerate(self.kdof[linkage2]):
+                    W[:,ndof]+=side*We[:,indof]        
+                
+                return npy.dot(W,q)
+
+
+
+
     def _get_static_results(self):
         if not self._utd_static_results:
             self._static_results=self._StaticAnalysis()
@@ -107,11 +174,19 @@ class Mechanism:
         
     def _get_kinematic_results(self):
         if not self._utd_kinematic_results:
-            self._kinematic_results=self._KinematicAnalysis()
+            self._kinematic_results,self._kinematic_vector=self._KinematicAnalysis()
             self._utd_kinematic_results=True
         return self._kinematic_results
 
     kinematic_results=property(_get_kinematic_results)
+    
+    def _get_kinematic_vector(self):
+        if not self._utd_kinematic_results:
+            self._kinematic_results,self._kinematic_vector=self._KinematicAnalysis()
+            self._utd_kinematic_results=True
+        return self._kinematic_vector
+
+    kinematic_vector=property(_get_kinematic_vector)
 
         
     def _StaticAnalysis(self):
@@ -164,21 +239,23 @@ class Mechanism:
                 u=linkage.position
                 uprime=u
                 L=geometry.CrossProductMatrix(uprime)
-                Me1=npy.abs(npy.dot(P,linkage.static_matrix[:3,:]))>1e-10
-                Me2=npy.abs(npy.dot(L,npy.dot(P,linkage.static_matrix[:3,:]))+npy.dot(P,linkage.static_matrix[3:,:]))>1e-10
+                if part==linkage.part1:
+                    static_matrix=linkage.static_matrix1
+                else:
+                    static_matrix=linkage.static_matrix2
+                    
+                Me1=npy.abs(npy.dot(P,static_matrix[:3,:]))>1e-10
+                Me2=npy.abs(npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:]))>1e-10
                 Me=npy.vstack([Me1,Me2])
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     M[ip*6:(ip+1)*6,ndof]+=Me[:,indof]
 
-                if part==linkage.part1:
-                    side=-1
-                else:
-                    side=1
-                Ke1=npy.dot(P,linkage.static_matrix[:3,:])
-                Ke2=npy.dot(L,npy.dot(P,linkage.static_matrix[:3,:]))+npy.dot(P,linkage.static_matrix[3:,:])
+                
+                Ke1=npy.dot(P,static_matrix[:3,:])
+                Ke2=npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:])
                 Ke=npy.vstack([Ke1,Ke2])
                 for indof,ndof in enumerate(self.sdof[linkage]):
-                    K[ip*6:(ip+1)*6,ndof]+=side*Ke[:,indof]
+                    K[ip*6:(ip+1)*6,ndof]+=Ke[:,indof]
 
                     
             # Unknowns loads contribution to the LHS
@@ -424,4 +501,4 @@ class Mechanism:
             for idof,dof in enumerate(dofs):
                 rlink[idof]=q[dof,0]
             results[link]=rlink
-        return results
+        return results,q
