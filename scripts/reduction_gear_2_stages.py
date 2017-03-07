@@ -74,12 +74,7 @@ for l,lv in mech.static_results.items():
         print(l.name,d,v)
 
 print('Cth: ',r1/(1-r1)*r2/(1-r2)*C)
-#print()
 
-#rk=mech.KinematicAnalysis()
-#print(Ca*r[bearing2a,0]+Cr*(r[bearing2a,1]**2+r[bearing2a,2]**2)**0.5,r[bearing2a,3])
-#for (l,d),v in mech.kinematic_results.items():
-#    print(l.name,d,v)
 for l,lv in mech.kinematic_results.items():
     for d,v in lv.items():
         print(l.name,d,v)

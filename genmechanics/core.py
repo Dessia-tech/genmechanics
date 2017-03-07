@@ -95,9 +95,7 @@ class Mechanism:
                 G.add_edge(linkage,linkage.part2)
         return G
 
-    holonomic_graph=property(_get_holonomic_graph)
-
-
+    holonomic_graph=property(_get_holonomic_graph)        
 
     def Speed(self,position,part_ref,part):
         """
@@ -128,7 +126,7 @@ class Mechanism:
                 for indof,ndof in enumerate(self.kdof[linkage2]):
                     V[:,ndof]+=side*Ve[:,indof]        
                 
-        return npy.dot(V,q)
+        return npy.dot(V,q).flatten()
             
     def RotationalSpeed(self,position,part_ref,part):
         """
@@ -159,10 +157,31 @@ class Mechanism:
                 for indof,ndof in enumerate(self.kdof[linkage2]):
                     W[:,ndof]+=side*We[:,indof]        
                 
-        return npy.dot(W,q)
-
-
+        return npy.dot(W,q).flatten()
     
+    def LocalLinkageSpeed(self,linkage):
+        """
+        :returns: relative speed of linkage in local linkage coordinate system
+        """
+        r=self.kinematic_results[linkage]# results
+        vr=npy.array([r[i] for i in range(linkage.n_kinematic_unknowns)])#vector of results
+        return npy.dot(linkage.kinematic_matrix,vr).flatten()
+
+    def LocalForces(self,linkage,num_part):
+        """
+        :returns :Local forces of linkage on part given by its number (0 for part1, 1 for part2)
+        """
+        r=self.static_results[linkage]# results
+        vr=npy.array([r[i] for i in range(linkage.n_static_unknowns)])#vector of results
+        if num_part==0:
+            return npy.dot(linkage.static_matrix1,vr)
+        else:
+            return npy.dot(linkage.static_matrix2,vr)
+
+    def GlobalForces(self,linkage,num_part):
+        P=geometry.Euler2TransferMatrix(*linkage.euler_angles)
+        lf=self.LocalForces(linkage,num_part)
+        return npy.dot(P,lf[:3])
 
     def _get_static_results(self):
         if not self._utd_static_results:
@@ -320,17 +339,18 @@ class Mechanism:
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_linkage))
 
                 # Collecting non linear equations
-                w=self.RotationalSpeed(linkage.position,self.ground,linkage.part1)
-                v=self.Speed(linkage.position,self.ground,linkage.part1)
+#                print(v)
                 if linkage.holonomic:
+                    # Relatives speed in this case
+                    ls=self.LocalLinkageSpeed(linkage)
+                    w=ls[:3]
+                    v=ls[3:]
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
-#                        v=[0]*linkage.n_kinematic_unknowns
-#                        for index,value in self.kinematic_results[linkage].items():
-#                            v[index]=value
-#                        v=npy.hstack((self.RotationalSpeed(linkage.position,self.ground,linkage.part1),self.Speed(linkage.position,self.ground,linkage.part1)))
-#                        print(fct,v,w)
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                 else:
+                    # Absolute speed in this case
+                    w=npy.dot(linkage.P.T,self.RotationalSpeed(linkage.position,self.ground,linkage.part1))
+                    v=npy.dot(linkage.P.T,self.Speed(linkage.position,self.ground,linkage.part1))
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                         
@@ -379,7 +399,7 @@ class Mechanism:
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
                 xs=fsolve(f,npy.zeros(len(variables)))
-#                print(f(xs))
+                rs=f(xs)
                 q[variables,0]=xs
 
 

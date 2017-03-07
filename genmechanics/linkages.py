@@ -7,6 +7,7 @@ Created on Wed Nov 16 13:14:34 2016
 
 import numpy as npy
 from math import cos,sin
+import genmechanics.geometry as geometry
 
 class Linkage:
     def __init__(self,part1,part2,position,euler_angles,static_matrix1,static_matrix2,
@@ -29,8 +30,9 @@ class Linkage:
         self.static_require_kinematic=static_require_kinematic
         
         self.n_static_unknowns=static_matrix1.shape[1]
+                
+        self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
         
-
         
 
 class HolonomicLinkage(Linkage):
@@ -47,14 +49,6 @@ class HolonomicLinkage(Linkage):
         self.n_kinematic_unknowns=kinematic_matrix.shape[1]
         
     
-
-    def LocalSpeeds(self,q):
-        """
-        :returns a (2,3) shape numpy arraywith speeds in local coordinate system. First row are rotatings speeds,
-            the second linear speeds
-        """
-        return npy.dot(self.kinematic_matrix,q)
-
         
 class NonHolonomicLinkage(Linkage):
     holonomic=False
@@ -192,7 +186,7 @@ class GearSetLinkage(NonHolonomicLinkage):
         static_behavior_occurence_matrix=npy.array([[1,1,1],[1,1,0]])
         static_behavior_nonlinear_eq_indices=[0,1]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(alpha)*cos(beta))*max(x[0],x[1])+x[2],
+        static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(alpha)*cos(beta)*max(abs(x[0]),abs(x[1])))+x[2],
                                       lambda x,w,v: x[1]-x[0]*(self.cf*(1+sin(alpha)**2*cos(alpha)**2)**0.5-1)
                                       if v[0]*x[0]>0 else x[0]-x[1]*(self.cf*(1+sin(alpha)**2*cos(alpha)**2)**0.5-1)]
         directions=[npy.array([1,0,0])]
