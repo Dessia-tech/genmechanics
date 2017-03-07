@@ -128,7 +128,7 @@ class Mechanism:
                 for indof,ndof in enumerate(self.kdof[linkage2]):
                     V[:,ndof]+=side*Ve[:,indof]        
                 
-                return npy.dot(V,q)
+        return npy.dot(V,q)
             
     def RotationalSpeed(self,position,part_ref,part):
         """
@@ -136,7 +136,7 @@ class Mechanism:
         """
         q=self.kinematic_vector#force kdof computation
         path=nx.shortest_path(self.holonomic_graph,part,part_ref)
-        V=npy.zeros((3,self.n_kdof))
+        W=npy.zeros((3,self.n_kdof))
         for il,linkage2 in enumerate(path):
             if not linkage2.__class__.__name__=='Part':
                 try:
@@ -155,14 +155,14 @@ class Mechanism:
 #                u=linkage2.position
 #                uprime=u-position
 #                L=geometry.CrossProductMatrix(uprime)
-                We=npy.dot(P,linkage2.kinematic_matrix[:3,:])+npy.dot(P,linkage2.kinematic_matrix[3:,:])
+                We=npy.dot(P,linkage2.kinematic_matrix[:3,:])
                 for indof,ndof in enumerate(self.kdof[linkage2]):
                     W[:,ndof]+=side*We[:,indof]        
                 
-                return npy.dot(W,q)
+        return npy.dot(W,q)
 
 
-
+    
 
     def _get_static_results(self):
         if not self._utd_static_results:
@@ -320,15 +320,19 @@ class Mechanism:
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_linkage))
 
                 # Collecting non linear equations
+                w=self.RotationalSpeed(linkage.position,self.ground,linkage.part1)
+                v=self.Speed(linkage.position,self.ground,linkage.part1)
                 if linkage.holonomic:
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
-                        v=[0]*linkage.n_kinematic_unknowns
-                        for index,value in self.kinematic_results[linkage].items():
-                            v[index]=value
-                        nonlinear_eq[neq+i]=lambda x,v=v,fct=fct:fct(x,v)
+#                        v=[0]*linkage.n_kinematic_unknowns
+#                        for index,value in self.kinematic_results[linkage].items():
+#                            v[index]=value
+#                        v=npy.hstack((self.RotationalSpeed(linkage.position,self.ground,linkage.part1),self.Speed(linkage.position,self.ground,linkage.part1)))
+#                        print(fct,v,w)
+                        nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                 else:
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
-                        nonlinear_eq[neq+i]=fct
+                        nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                         
                 # Updating counters
                 neq+=neq_linkage
@@ -375,6 +379,7 @@ class Mechanism:
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
                 xs=fsolve(f,npy.zeros(len(variables)))
+#                print(f(xs))
                 q[variables,0]=xs
 
 

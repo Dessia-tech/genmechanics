@@ -138,7 +138,7 @@ class FrictionlessGearSetLinkage(NonHolonomicLinkage):
         static_behavior_occurence_matrix=npy.array([[1,1]])
         static_behavior_nonlinear_eq_indices=[0]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[lambda x:abs(sin(alpha)*cos(beta)*x[0])-x[1]]
+        static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(alpha)*cos(beta)*x[0])-x[1]]
         directions=[npy.array([1,0,0])]
         static_require_kinematic=False
         NonHolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
@@ -156,7 +156,7 @@ class BallLinkage(HolonomicLinkage):
         static_behavior_occurence_matrix=npy.array([[1,1,1,1]])
         static_behavior_nonlinear_eq_indices=[0]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[lambda x,v:abs(v[0])/v[0]*(Ca*abs(x[0])+Cr*(x[1]**2+x[2]**2)**0.5)+x[3] if v[0]!=0 else 0.]
+        static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*(Ca*abs(x[0])+Cr*(x[1]**2+x[2]**2)**0.5)+x[3] if w[0]!=0 else x[3]]
         kinematic_matrix=npy.array([[1,0,0],[0,1,0],[0,0,1],[0,0,0],[0,0,0],[0,0,0]])
         static_require_kinematic=True
         HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
@@ -173,7 +173,7 @@ class LinearAnnularLinkage(HolonomicLinkage):
         static_behavior_occurence_matrix=npy.array([[1,1,1]])
         static_behavior_nonlinear_eq_indices=[0]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[lambda x,v:abs(v[0])/v[0]*(Cr*(x[0]**2+x[1]**2)**0.5)+x[2] if v[0]!=0 else 0.]
+        static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*(Cr*(w[0]**2+x[1]**2)**0.5)+x[2] if w[0]!=0 else x[2]]
         kinematic_matrix=npy.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1],[0,0,0,0],[0,0,0,0]])
         static_require_kinematic=True
         HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
@@ -189,12 +189,12 @@ class GearSetLinkage(NonHolonomicLinkage):
         self.cf=cf# force coefficient
         static_matrix2=npy.array([[cos(beta)*cos(alpha),0,0],[sin(alpha),0,0],[0,0,-1],[0,0,0],[0,0,0],[0,0,0]])
         static_matrix1=npy.array([[0,cos(beta)*cos(alpha),0],[0,sin(alpha),0],[0,0,1],[0,0,0],[0,0,0],[0,0,0]])
-        static_behavior_occurence_matrix=npy.array([[1,1]])
-        static_behavior_nonlinear_eq_indices=[0]
+        static_behavior_occurence_matrix=npy.array([[1,1,1],[1,1,0]])
+        static_behavior_nonlinear_eq_indices=[0,1]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[lambda x:abs(sin(alpha)*cos(beta))*max(x[0],x[1])+x[2],
-                                      lambda x,v: x[1]-x[0]*(self.cf*(1+sin(alpha)**2*cos(alpha)**2)**0.5-1)
-                                      if v[3]*x[0]>0 else x[0]-x[1]*(self.cf*(1+sin(alpha)**2*cos(alpha)**2)**0.5-1)]
+        static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(alpha)*cos(beta))*max(x[0],x[1])+x[2],
+                                      lambda x,w,v: x[1]-x[0]*(self.cf*(1+sin(alpha)**2*cos(alpha)**2)**0.5-1)
+                                      if v[0]*x[0]>0 else x[0]-x[1]*(self.cf*(1+sin(alpha)**2*cos(alpha)**2)**0.5-1)]
         directions=[npy.array([1,0,0])]
         static_require_kinematic=False
         NonHolonomicLinkage.__init__(self,part1,part2,position,euler_angles,

@@ -19,6 +19,7 @@ r2=0.7
 
 Ca=0.0008
 Cr=0.0006
+Cf=0.01
 
 alpha_gs1=18/360*2*3.1415
 beta_gs1=20/360*2*3.1415
@@ -56,8 +57,8 @@ bearing3a=linkages.BallLinkage(ground,shaft3,p3a,[0,0,0],Ca,Cr,'bearing3a')
 bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,'bearing3b')
 
 
-gearset12=linkages.FrictionlessGearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,'Gear set 2')
-gearset23=linkages.FrictionlessGearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,'Gear set 2')
+gearset12=linkages.GearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,Cf,'Gear set 1')
+gearset23=linkages.GearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,Cf,'Gear set 2')
 
 load1=genmechanics.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
 load2=genmechanics.UnknownMechanicalLoad(shaft3,[L/2,0,0],[0,0,0],[],[0],'output torque')
