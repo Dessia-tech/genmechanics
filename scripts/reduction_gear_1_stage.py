@@ -16,6 +16,8 @@ e2=0.07
 C=300
 r1=0.1
 r2=0.7
+Ca=0.005
+Cr=0.002
 
 ground=genmechanics.Part('ground')
 shaft1=genmechanics.Part('shaft1')
@@ -31,10 +33,10 @@ p2b=npy.array([L,0,e1])
 pgs1=0.5*(p1a+p1b)*r1+(1-r1)*0.5*(p2a+p2b)
 print(pgs1)
 
-bearing1a=linkages.BallLinkage(ground,shaft1,p1a,[0,0,0],'bearing 1a')
-bearing1b=linkages.LinearAnnularLinkage(ground,shaft1,p1b,[0,0,0],'bearing 1b')
-bearing2a=linkages.BallLinkage(ground,shaft2,p2a,[0,0,0],'bearing 2a')
-bearing2b=linkages.LinearAnnularLinkage(ground,shaft2,p2b,[0,0,0],'bearing 2b')
+bearing1a=linkages.BallLinkage(ground,shaft1,p1a,[0,0,0],Ca,Cr,'bearing 1a')
+bearing1b=linkages.LinearAnnularLinkage(ground,shaft1,p1b,[0,0,0],Cr,'bearing 1b')
+bearing2a=linkages.BallLinkage(ground,shaft2,p2a,[0,0,0],Ca,Cr,'bearing 2a')
+bearing2b=linkages.LinearAnnularLinkage(ground,shaft2,p2b,[0,0,0],Cr,'bearing 2b')
 #bearing3a=linkages.BallLinkage(ground,shaft3,p3a,[0,0,0])
 #bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0])
 
