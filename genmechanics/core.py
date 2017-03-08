@@ -21,11 +21,13 @@ class KnownMechanicalLoad:
         self.part=part
         self.position=position
         self.euler_angles=euler_angles
-        self.force=force
-        self.torque=torque
+        self.force=npy.array(force)
+        self.torque=npy.array(torque)
         self.force_matrix=npy.array([[force[0],0,0],[0,force[1],0],[0,0,force[2]]])
         self.torque_matrix=npy.array([[torque[0],0,0],[0,torque[1],0],[0,0,torque[2]]])
         self.name=name
+        
+        self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
 
 class UnknownMechanicalLoad:
     """
@@ -49,6 +51,9 @@ class UnknownMechanicalLoad:
         for i,k in enumerate(torque_directions):
             self.static_matrix[k+3,i+lfd]=1
         self.name=name
+        
+        self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
+        self.n_static_unknowns=self.static_matrix.shape[1]
         
 class Mechanism:
     def __init__(self,linkages,ground,imposed_speeds,known_static_loads,unknown_static_loads,name=''):
@@ -97,6 +102,16 @@ class Mechanism:
 
     holonomic_graph=property(_get_holonomic_graph)        
 
+    def ChangeImposedSpeeds(self,imposed_speeds):
+        self.imposed_speeds=imposed_speeds
+        self._utd_kinematic_results=False
+
+    def ChangeLoads(self,known_static_loads,unknown_static_loads):
+        self.known_static_loads=known_static_loads
+        self.unknown_static_loads=unknown_static_loads
+        self._utd_static_results=False
+        
+        
     def Speed(self,position,part_ref,part):
         """
         Speed from point belonging to part with part_ref as reference
@@ -182,7 +197,37 @@ class Mechanism:
         P=geometry.Euler2TransferMatrix(*linkage.euler_angles)
         lf=self.LocalForces(linkage,num_part)
         return npy.dot(P,lf[:3])
+    
+    def LocalLoadForce(self,load):
+        try:
+            return load.force
+        except AttributeError:       
+            r=self.static_results[load]# results
+            vr=npy.array([r[i] for i in range(load.n_static_unknowns)])#vector of results
+            return npy.dot(load.static_matrix[:3],vr)
 
+    def LocalLoadTorque(self,load):
+        try:
+            return load.torque
+        except AttributeError:            
+            r=self.static_results[load]# results
+            vr=npy.array([r[i] for i in range(load.n_static_unknowns)])#vector of results
+            return npy.dot(load.static_matrix[3:],vr)
+    
+    def GlobalLoadForce(self,load):
+        return npy.dot(load.P,self.LocalLoadForce(load))
+
+    def GlobalLoadTorque(self,load):
+        return npy.dot(load.P,self.LocalLoadTorque(load))
+    
+    def LinkagePower(self,linkage,num_part):
+        return npy.dot(self.LocalLinkageSpeed(linkage),self.LocalForces(linkage,num_part))
+
+    def LoadPower(self,load):
+        P=npy.dot(self.Speed(load.position,self.ground,load.part),self.GlobalLoadForce(load))
+        P+=npy.dot(self.RotationalSpeed(load.position,self.ground,load.part),self.GlobalLoadTorque(load))
+        return P
+    
     def _get_static_results(self):
         if not self._utd_static_results:
             self._static_results=self._StaticAnalysis()
@@ -409,6 +454,10 @@ class Mechanism:
             for idof,dof in enumerate(dofs):
                 rlink[idof]=q[dof,0]
             results[link]=rlink
+            
+#        # Putting knowns load in results
+#        for load in self.known_static_loads:
+#            results[load]
         return results        
         
     def _KinematicAnalysis(self):
