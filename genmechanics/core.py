@@ -105,6 +105,7 @@ class Mechanism:
     def ChangeImposedSpeeds(self,imposed_speeds):
         self.imposed_speeds=imposed_speeds
         self._utd_kinematic_results=False
+        self._utd_static_results=False# Change of speeds might change resistant forces: update needed
 
     def ChangeLoads(self,known_static_loads,unknown_static_loads):
         self.known_static_loads=known_static_loads
@@ -393,9 +394,10 @@ class Mechanism:
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                 else:
-                    # Absolute speed in this case
+                    # Absolute speed in this case in local coordinate system
                     w=npy.dot(linkage.P.T,self.RotationalSpeed(linkage.position,self.ground,linkage.part1))
                     v=npy.dot(linkage.P.T,self.Speed(linkage.position,self.ground,linkage.part1))
+#                    print(w,v)
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                         
