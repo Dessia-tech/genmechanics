@@ -187,8 +187,7 @@ class LinearAnnularLinkage(HolonomicLinkage):
                                   static_require_kinematic,name)
         
         
-    def ChangeCoefficients(self,Ca,Cr,Cw):
-        self.Ca=Ca
+    def ChangeCoefficients(self,Cr,Cw):
         self.Cr=Cr
         self.Cw=Cw
         self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*(Cr*(w[0]**2+x[1]**2)**0.5+Cw*w[0])+x[2] if w[0]!=0 else x[2]]
@@ -217,11 +216,9 @@ class GearSetLinkage(NonHolonomicLinkage):
                                      static_behavior_linear_eq,static_behavior_nonlinear_eq,
                                      directions,static_require_kinematic,name)
         
-    def ChangeCoefficients(self,alpha,beta,Cf,Cv):
-        self.alpha=alpha
-        self.beta=beta
+    def ChangeCoefficients(self,Cf,Cv):
         self.Cf=Cf
         self.Cv=Cv
-        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(alpha)*cos(beta)*max(abs(x[0]),abs(x[1])))+x[2],
-                                      lambda x,w,v: x[1]-x[0]*(Cf*(1+sin(alpha)**2*cos(alpha)**2)**0.5-1)+Cv*abs(v[0])
-                                      if v[0]*x[0]>0 else x[0]-x[1]*(Cf*(1+sin(alpha)**2*cos(alpha)**2)**0.5-1)+Cv*abs(v[0])]
+        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(self.alpha)*cos(self.beta)*max(abs(x[0]),abs(x[1])))+x[2],
+                                      lambda x,w,v: x[1]-x[0]*(Cf*(1+sin(self.alpha)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])
+                                      if v[0]*x[0]>0 else x[0]-x[1]*(Cf*(1+sin(self.alpha)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])]
