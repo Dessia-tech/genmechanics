@@ -576,10 +576,11 @@ class Mechanism:
     
     def GlobalSankey(self):
         from matplotlib.sankey import Sankey
-        sankey = Sankey(unit='W')
         flows=[]
         orientations=[]
         labels=[]
+        
+        
         for load in self.known_static_loads+self.unknown_static_loads:
             flows.append(self.LoadPower(load))
             orientations.append(0)
@@ -589,8 +590,13 @@ class Mechanism:
             flows.append(-self.LinkagePowerLosses(linkage))
             orientations.append(-1)
             labels.append(linkage.name)
+#            pl.append(0.5*l)
+        l=max([abs(f) for f in flows])
+#        pl=[0.1*l]*len(flows)
 
+        sankey = Sankey(unit='W',scale=1/l)
+    
         sankey.add(flows=flows,
-           orientations=orientations,labels=labels,trunklength=max([abs(f) for f in flows]))
+           orientations=orientations,labels=labels,)
         
         sankey.finish()
