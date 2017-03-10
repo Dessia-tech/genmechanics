@@ -17,14 +17,12 @@ class Part:
         
         
 class KnownMechanicalLoad:
-    def __init__(self,part,position,euler_angles,force,torque,name=''):
+    def __init__(self,part,position,euler_angles,forces,torques,name=''):
         self.part=part
         self.position=position
         self.euler_angles=euler_angles
-        self.force=npy.array(force)
-        self.torque=npy.array(torque)
-        self.force_matrix=npy.array([[force[0],0,0],[0,force[1],0],[0,0,force[2]]])
-        self.torque_matrix=npy.array([[torque[0],0,0],[0,torque[1],0],[0,0,torque[2]]])
+        self.forces=npy.array(forces)
+        self.torques=npy.array(torques)
         self.name=name
         
         self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
@@ -113,13 +111,14 @@ class Mechanism:
         self._utd_static_results=False
         
         
-    def Speed(self,position,part_ref,part):
+    def Speeds(self,position,part_ref,part):
         """
-        Speed from point belonging to part with part_ref as reference
+        Speeds from point belonging to part with part_ref as reference
         """
         q=self.kinematic_vector#force kdof computation
-        path=nx.shortest_path(self.holonomic_graph,part,part_ref)
+        path=nx.shortest_path(self.holonomic_graph,part_ref,part)
         V=npy.zeros((3,self.n_kdof))
+        W=npy.zeros((3,self.n_kdof))
         for il,linkage2 in enumerate(path):
             if not linkage2.__class__.__name__=='Part':
                 try:
@@ -139,51 +138,32 @@ class Mechanism:
                 uprime=u-position
                 L=geometry.CrossProductMatrix(uprime)
                 Ve=npy.dot(L,npy.dot(P,linkage2.kinematic_matrix[:3,:]))+npy.dot(P,linkage2.kinematic_matrix[3:,:])
-                for indof,ndof in enumerate(self.kdof[linkage2]):
-                    V[:,ndof]+=side*Ve[:,indof]        
-                
-        return npy.dot(V,q).flatten()
-            
-    def RotationalSpeed(self,position,part_ref,part):
-        """
-        RotationalSpeed from point belonging to part with part_ref as reference
-        """
-        q=self.kinematic_vector#force kdof computation
-        path=nx.shortest_path(self.holonomic_graph,part,part_ref)
-        W=npy.zeros((3,self.n_kdof))
-        for il,linkage2 in enumerate(path):
-            if not linkage2.__class__.__name__=='Part':
-                try:
-                    if path[il+1]==linkage2.part2:
-                        side=1                            
-                    else:
-                        side=-1
-                except IndexError:
-                    # linkage is last element of list
-                    if path[il-1]==linkage2.part1:
-                        side=1     
-                    else:
-                        side=-1
-                # It's really a linkage
-                P=geometry.Euler2TransferMatrix(*linkage2.euler_angles)            
-#                u=linkage2.position
-#                uprime=u-position
-#                L=geometry.CrossProductMatrix(uprime)
                 We=npy.dot(P,linkage2.kinematic_matrix[:3,:])
                 for indof,ndof in enumerate(self.kdof[linkage2]):
-                    W[:,ndof]+=side*We[:,indof]        
+                    V[:,ndof]+=side*Ve[:,indof] 
+                    W[:,ndof]+=side*We[:,indof] 
                 
-        return npy.dot(W,q).flatten()
+        return npy.hstack((npy.dot(W,q).flatten(),npy.dot(V,q).flatten()))
+
     
-    def LocalLinkageSpeed(self,linkage):
+    def LocalLinkageSpeeds(self,linkage):
         """
         :returns: relative speed of linkage in local linkage coordinate system
         """
-        r=self.kinematic_results[linkage]# results
-        vr=npy.array([r[i] for i in range(linkage.n_kinematic_unknowns)])#vector of results
-        return npy.dot(linkage.kinematic_matrix,vr).flatten()
 
-    def LocalForces(self,linkage,num_part):
+        try:
+            # holonomic linkage
+            r=self.kinematic_results[linkage]# results
+            vr=npy.array([r[i] for i in range(linkage.n_kinematic_unknowns)])#vector of results
+            return npy.dot(linkage.kinematic_matrix,vr).flatten()
+        except:
+            s=self.Speed(linkage.position,self.ground,linkage.part1)
+            v=npy.dot(linkage.P,s[:3])
+            w=npy.dot(linkage.P,s[3:])
+#            return npy.dot(linkage.P,s)
+            return npy.hstack((w,v)).flatten()
+    
+    def LocalLinkageForces(self,linkage,num_part):
         """
         :returns :Local forces of linkage on part given by its number (0 for part1, 1 for part2)
         """
@@ -194,39 +174,57 @@ class Mechanism:
         else:
             return npy.dot(linkage.static_matrix2,vr)
 
-    def GlobalForces(self,linkage,num_part):
+    def GlobalLinkageForces(self,linkage,num_part):
         P=geometry.Euler2TransferMatrix(*linkage.euler_angles)
-        lf=self.LocalForces(linkage,num_part)
-        return npy.dot(P,lf[:3])
+        lf=self.LocalLinkageForces(linkage,num_part)
+        F=npy.zeros(6)
+        F[:3]=npy.dot(P,lf[:3])
+        F[3:]=npy.dot(P,lf[3:])
+        return F
     
-    def LocalLoadForce(self,load):
+    def LocalLoadForces(self,load):
         try:
-            return load.force
+            F=npy.zeros(6)
+            F[:3]=load.forces
+            F[3:]=load.torques
+            return F
         except AttributeError:       
             r=self.static_results[load]# results
             vr=npy.array([r[i] for i in range(load.n_static_unknowns)])#vector of results
-            return npy.dot(load.static_matrix[:3],vr)
+            return npy.dot(load.static_matrix,vr)
 
-    def LocalLoadTorque(self,load):
-        try:
-            return load.torque
-        except AttributeError:            
-            r=self.static_results[load]# results
-            vr=npy.array([r[i] for i in range(load.n_static_unknowns)])#vector of results
-            return npy.dot(load.static_matrix[3:],vr)
     
-    def GlobalLoadForce(self,load):
-        return npy.dot(load.P,self.LocalLoadForce(load))
+    def GlobalLoadForces(self,load):
+        f=self.LocalLoadForces(load)
+#        print(f)
+        F=npy.zeros(6)
+        F[:3]=npy.dot(load.P,f[:3]).flatten()
+#        print(npy.dot(load.P,f[3:]).flatten())
+        F[3:]=npy.dot(load.P,f[3:]).flatten()
+        return F
 
-    def GlobalLoadTorque(self,load):
-        return npy.dot(load.P,self.LocalLoadTorque(load))
     
-    def LinkagePower(self,linkage,num_part):
-        return npy.dot(self.LocalLinkageSpeed(linkage),self.LocalForces(linkage,num_part))
+    def LinkagePowerLosses(self,linkage):
+        if linkage.holonomic:
+            tf=self.LocalLinkageForces(linkage,0)
+            ft=npy.hstack((tf[3:],tf[:3]))
+            return npy.dot(self.LocalLinkageSpeeds(linkage),ft)
+        else:
+            d=self.GlobalLinkageForces(linkage,0)+self.GlobalLinkageForces(linkage,1)
+            df=d[:3]
+            dt=d[3:]
+            s=self.Speeds(linkage.position,self.ground,linkage.part1)
+            w=s[:3]
+            v=s[3:]
+#            print(df,dt,w,v)
+            return npy.dot(df,v)+npy.dot(dt,w)
 
+            
     def LoadPower(self,load):
-        P=npy.dot(self.Speed(load.position,self.ground,load.part),self.GlobalLoadForce(load))
-        P+=npy.dot(self.RotationalSpeed(load.position,self.ground,load.part),self.GlobalLoadTorque(load))
+        s=self.Speeds(load.position,self.ground,load.part)
+        f=self.GlobalLoadForces(load)
+        P=npy.dot(s[3:],f[:3])
+        P+=npy.dot(f[3:],s[:3])
         return P
     
     def _get_static_results(self):
@@ -343,7 +341,7 @@ class Mechanism:
                 Ke2=npy.dot(L,npy.dot(P,load.static_matrix[:3,:]))+npy.dot(P,load.static_matrix[3:,:])
                 Ke=npy.vstack([Ke1,Ke2])
                 for indof,ndof in enumerate(self.sdof[load]):
-                    K[ip*6:(ip+1)*6,ndof]-=Ke[:,indof]     # minus because of sum is in LHS 
+                    K[ip*6:(ip+1)*6,ndof]=Ke[:,indof]     # minus because of sum is in LHS
                     
                     
             # knowns loads contribution to the RHS
@@ -356,8 +354,8 @@ class Mechanism:
                 u=load.position
                 uprime=u
                 L=geometry.CrossProductMatrix(uprime)
-                F1=npy.dot(P,load.force)
-                F2=npy.dot(L,npy.dot(P,load.force))+npy.dot(P,load.torque)
+                F1=npy.dot(P,load.forces)
+                F2=npy.dot(L,npy.dot(P,load.forces))+npy.dot(P,load.torques)
                 Fe=npy.vstack([F1.reshape((3,1)),F2.reshape((3,1))])
                 F[ip*6:(ip+1)*6,:]-=Fe # minus because of sum is in LHS
         
@@ -388,15 +386,16 @@ class Mechanism:
 #                print(v)
                 if linkage.holonomic:
                     # Relatives speed in this case
-                    ls=self.LocalLinkageSpeed(linkage)
+                    ls=self.LocalLinkageSpeeds(linkage)
                     w=ls[:3]
                     v=ls[3:]
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                 else:
                     # Absolute speed in this case in local coordinate system
-                    w=npy.dot(linkage.P.T,self.RotationalSpeed(linkage.position,self.ground,linkage.part1))
-                    v=npy.dot(linkage.P.T,self.Speed(linkage.position,self.ground,linkage.part1))
+                    s=self.Speeds(linkage.position,self.ground,linkage.part1)
+                    w=npy.dot(linkage.P.T,s[:3])
+                    v=npy.dot(linkage.P.T,s[3:])
 #                    print(w,v)
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
@@ -446,7 +445,6 @@ class Mechanism:
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
                 xs=fsolve(f,npy.zeros(len(variables)))
-                rs=f(xs)
                 q[variables,0]=xs
 
 
@@ -457,9 +455,6 @@ class Mechanism:
                 rlink[idof]=q[dof,0]
             results[link]=rlink
             
-#        # Putting knowns load in results
-#        for load in self.known_static_loads:
-#            results[load]
         return results        
         
     def _KinematicAnalysis(self):
@@ -578,3 +573,24 @@ class Mechanism:
                 rlink[idof]=q[dof,0]
             results[link]=rlink
         return results,q
+    
+    def GlobalSankey(self):
+        from matplotlib.sankey import Sankey
+        sankey = Sankey(unit='W')
+        flows=[]
+        orientations=[]
+        labels=[]
+        for load in self.known_static_loads+self.unknown_static_loads:
+            flows.append(self.LoadPower(load))
+            orientations.append(0)
+            labels.append(load.name)
+            
+        for linkage in self.linkages:
+            flows.append(-self.LinkagePowerLosses(linkage))
+            orientations.append(-1)
+            labels.append(linkage.name)
+
+        sankey.add(flows=flows,
+           orientations=orientations,labels=labels,trunklength=max([abs(f) for f in flows]))
+        
+        sankey.finish()

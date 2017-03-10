@@ -66,3 +66,6 @@ for l,r in mech.static_results.items():
     
     
 print('Cth: ',-r1/(1-r1)*C)
+
+
+mech.GlobalSankey()

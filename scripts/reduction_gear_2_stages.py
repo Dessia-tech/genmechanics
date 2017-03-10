@@ -82,3 +82,5 @@ for l,lv in mech.kinematic_results.items():
         print(l.name,d,v)
 
 print('wth: ',(1-r1)/r1*(1-r2)/r2*w)
+
+
