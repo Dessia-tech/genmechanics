@@ -7,6 +7,8 @@ Created on Wed Nov 16 14:21:07 2016
 
 import genmechanics
 import genmechanics.linkages as linkages
+import genmechanics.loads as loads
+
 import numpy as npy
 
 L=0.2
@@ -62,8 +64,8 @@ bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,Cwb,'bearin
 gearset12=linkages.GearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,Cf,Cvgs,'Gear set 1')
 gearset23=linkages.GearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,Cf,Cvgs,'Gear set 2')
 
-load1=genmechanics.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
-load2=genmechanics.UnknownMechanicalLoad(shaft3,[L/2,0,0],[0,0,0],[],[0],'output torque')
+load1=loads.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
+load2=loads.UnknownMechanicalLoad(shaft3,[L/2,0,0],[0,0,0],[],[0],'output torque')
 
 imposed_speeds=[(bearing1a,0,w)]
 
@@ -83,4 +85,5 @@ for l,lv in mech.kinematic_results.items():
 
 print('wth: ',(1-r1)/r1*(1-r2)/r2*w)
 
+mech.GlobalSankey()
 

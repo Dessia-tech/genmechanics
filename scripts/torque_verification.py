@@ -7,6 +7,7 @@ Created on Fri Nov 18 17:31:34 2016
 
 import genmechanics
 import genmechanics.linkages as linkages
+import genmechanics.loads as loads
 import numpy as npy
 import scipy.linalg as linalg
 
@@ -20,8 +21,8 @@ bearing=genmechanics.linkages.RevoluteLinkage(ground,shaft1,[0,0,0],[0,0,0],'bea
 
 mech=genmechanics.Mechanism([bearing],ground)
 
-load1=genmechanics.KnownMechanicalLoad(shaft1,[0,L,0],[0,0,0],[0,0,F],[0,0,0],'load')
-load2=genmechanics.UnknownMechanicalLoad(shaft1,[0,0,0],[0,0,0],[],[0],'output_torque')
+load1=loads.KnownMechanicalLoad(shaft1,[0,L,0],[0,0,0],[0,0,F],[0,0,0],'load')
+load2=loads.UnknownMechanicalLoad(shaft1,[0,0,0],[0,0,0],[],[0],'output_torque')
 
 r=mech.StaticAnalysis([load1],[load2])
 

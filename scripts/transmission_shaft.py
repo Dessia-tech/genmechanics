@@ -17,6 +17,7 @@ Created on Sat Dec 24 10:50:15 2016
 
 import genmechanics
 import genmechanics.linkages as linkages
+import genmechanics.loads as loads
 import numpy as npy
 
 L=2.2
@@ -40,8 +41,8 @@ bearing2=linkages.LinearAnnularLinkage(ground,shaft1,p2,[0,0,0],Cr,'bearing2a')
 #bearing2b=linkages.LinearAnnularLinkage(ground,shaft2,p2b,[0,0,0],Cr,'bearing2b')
 
 
-load1=genmechanics.KnownMechanicalLoad(shaft1,[-L/8,0,0],[0,0,0],[Fa,Fr,0],[C,0,0],'input torque and loads')
-load2=genmechanics.UnknownMechanicalLoad(shaft1,[9*L/8,0,0],[0,0,0],[],[0],'output torque')
+load1=loads.KnownMechanicalLoad(shaft1,[-L/8,0,0],[0,0,0],[Fa,Fr,0],[C,0,0],'input torque and loads')
+load2=loads.UnknownMechanicalLoad(shaft1,[9*L/8,0,0],[0,0,0],[],[0],'output torque')
 imposed_speeds=[(bearing1,0,W)]
 
 mech=genmechanics.Mechanism([bearing1,bearing2],ground,imposed_speeds,[load1],[load2])
