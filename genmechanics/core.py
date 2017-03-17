@@ -229,7 +229,7 @@ class Mechanism:
                   
         uloads_parts={}
         for load in self.unknown_static_loads:
-            load_unknowns=len(load.force_directions)+len(load.torque_directions)
+            load_unknowns=load.static_matrix.shape[1]
             self.sdof[load]=list(range(self.n_sdof,self.n_sdof+load_unknowns))
             self.n_sdof+=load_unknowns
             if load.static_require_kinematic:
@@ -417,7 +417,7 @@ class Mechanism:
 
         
         solvable,solvable_var,resolution_order=tools.EquationsSystemAnalysis(M,None)
-
+#        print(resolution_order)
         for eqs,variables in resolution_order:
             linear=True
             linear_eqs=[]

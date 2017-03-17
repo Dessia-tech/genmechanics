@@ -14,15 +14,15 @@ import scipy.linalg as linalg
 
 Lb=0.2# bearing width
 Lgs=0.045# Gearset width
-e1=0.05
-e2=0.07
+
+
 C=300
 w=300
-r1=0.8
-r2=0.7
-y2=0.0795
-z2=-23
-y3=0.193
+r1=0.048
+r2=0.047
+y2=0.078
+z2=-0.026
+y3=0.203
 z3=0
 
 
@@ -76,27 +76,25 @@ bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,Cwb,'bearin
 gearset12=linkages.GearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,Cf,Cvgs,'Gear set 1')
 gearset23=linkages.GearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,Cf,Cvgs,'Gear set 2')
 
-load_i=loads.KnownLoad(shaft1,[-Lb/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
-load_o=loads.SimpleUnknownLoad(shaft3,[Lb/2,0,0],[0,0,0],[],[0],'output torque')
-#load_splash_shaft1=loads.SplashLoad(shaft1,pgs11,(0,0,0),0.3*r1**2,Cl,Ct,Rl,name)
+load1=loads.KnownLoad(shaft1,[-Lb/2,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
+load2=loads.SimpleUnknownLoad(shaft3,[2*(Lgs+Lb),y2,z2],[0,0,0],[],[0],'output torque')
 
 imposed_speeds=[(bearing1a,0,w)]
 
-mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,bearing3a,bearing3b,gearset12,gearset23],ground,imposed_speeds,[load_i],[load_o])
-
+mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,bearing3a,bearing3b,gearset12,gearset23],ground,imposed_speeds,[load1],[load2])
 
 
 for l,lv in mech.static_results.items():
     for d,v in lv.items():
         print(l.name,d,v)
 
-print('Cth: ',r1/(1-r1)*r2/(1-r2)*C)
+#print('Cth: ',r1/(1-r1)*r2/(1-r2)*C)# False now
 
 for l,lv in mech.kinematic_results.items():
     for d,v in lv.items():
         print(l.name,d,v)
 
-print('wth: ',(1-r1)/r1*(1-r2)/r2*w)
+#print('wth: ',(1-r1)/r1*(1-r2)/r2*w) # False now
 
 mech.GlobalSankey()
 

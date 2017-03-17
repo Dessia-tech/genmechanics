@@ -86,16 +86,20 @@ class SplashLoad(UnknownLoad):
     """
     Creates a splash force linked to the rotationnal speed around
     """
-    def __init__(self,part,position,euler_angles,area,Cl,Ct,Rl,name):
+    def __init__(self,part,position,euler_angles,area,radius,Cl,Ct,Rl,mu,name):
         self.Cl=Cl
         self.Ct=Ct
         self.Rl=Rl# limit reynods number
-        static_matrix=zeros(6)
-        static_matrix[3]=1# Resistant torque on X
+        self.radius=radius
+        self.mu=mu
+        self.area=area
+        
+        static_matrix=zeros((6,1))
+        static_matrix[3,0]=1# Resistant torque on X
         static_behavior_occurence_matrix=array([[1]])
         static_behavior_nonlinear_eq_indices=[0]
         static_behavior_linear_eq=array([])
-        static_behavior_nonlinear_eq=[lambda x,w,v:x[0]-self.Cl*w[0]**2 if w[0]>self.Rl else x[0]-self.Ct*w[0]**2]
+        static_behavior_nonlinear_eq=[lambda x,w,v:x[0]+self.Cl*self.area*w[0]**2/abs(w[0]) if self.radius**2*w[0]/self.mu<self.Rl else x[0]+abs(w[0])/w[0]*self.Ct*self.area]
         static_require_kinematic=True
         
         UnknownLoad.__init__(self,part,position,euler_angles,static_matrix,
