@@ -214,7 +214,7 @@ class GearSetLinkage(NonHolonomicLinkage):
                                       lambda x,w,v: x[1]-x[0]*(Cf*(1+sin(beta)**2*cos(alpha)**2)**0.5-1)+Cv*abs(v[0])
                                       if v[0]*x[0]>0 else x[0]-x[1]*(Cf*(1+sin(beta)**2*cos(alpha)**2)**0.5-1)+Cv*abs(v[0])]
         directions=[npy.array([1,0,0])]
-        static_require_kinematic=False
+        static_require_kinematic=True
         NonHolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
                                      static_matrix1,static_matrix2,static_behavior_occurence_matrix,
                                      static_behavior_nonlinear_eq_indices,

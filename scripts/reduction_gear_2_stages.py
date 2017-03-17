@@ -10,14 +10,21 @@ import genmechanics.linkages as linkages
 import genmechanics.loads as loads
 
 import numpy as npy
+import scipy.linalg as linalg
 
-L=0.2
+Lb=0.2# bearing width
+Lgs=0.045# Gearset width
 e1=0.05
 e2=0.07
 C=300
 w=300
 r1=0.8
 r2=0.7
+y2=0.0795
+z2=-23
+y3=0.193
+z3=0
+
 
 Ca=0.0008
 Cr=0.0006
@@ -25,10 +32,10 @@ Cf=0.01
 Cwb=0.00001# Speed coeff for bearings
 Cvgs=0.0001# Speed coeff for gear sets
 
-alpha_gs1=18/360*2*3.1415
-beta_gs1=20/360*2*3.1415
-alpha_gs2=-21/360*2*3.1415
-beta_gs2=20/360*2*3.1415
+alpha_gs1=20/360*2*3.1415
+beta_gs1=25/360*2*3.1415
+alpha_gs2=20/360*2*3.1415
+beta_gs2=-25/360*2*3.1415
 
 
 ground=genmechanics.Part('ground')
@@ -37,14 +44,19 @@ shaft2=genmechanics.Part('shaft2')
 shaft3=genmechanics.Part('shaft3')
 
 p1a=npy.array([0,0,0])
-p1b=npy.array([L,0,0])
-p2a=npy.array([0,e1,0])
-p2b=npy.array([L,e1,0])
-p3a=npy.array([0,e1+e2,e2])
-p3b=npy.array([L,e1+e2,e2])
+p1b=npy.array([Lb+Lgs,0,0])
+p2a=npy.array([0,y2,z2])
+p2b=npy.array([Lb+2*Lgs,y2,z2])
+p3a=npy.array([0,y3,z3])
+p3b=npy.array([Lb+2*Lgs,y3,z3])
 
-pgs1=0.5*(p1a+p1b)*r1+(1-r1)*0.5*(p2a+p2b)
-pgs2=0.5*(p2a+p2b)*r2+(1-r2)*0.5*(p3a+p3b)
+pgs11=npy.array([0.5*(Lgs+Lb),0,0])
+pgs12=npy.array([0.5*(Lgs+Lb),y2,z2])
+pgs22=npy.array([0.5*(3*Lgs+Lb),y2,z2])
+pgs23=npy.array([0.5*(3*Lgs+Lb),y3,z3])
+
+pgs1=pgs11+(pgs12-pgs11)/linalg.norm(pgs12-pgs11)*r1
+pgs2=pgs22+(pgs23-pgs22)/linalg.norm(pgs23-pgs22)*r2
 
 dir_axis=npy.array([1,0,0])
 
@@ -64,12 +76,13 @@ bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,Cwb,'bearin
 gearset12=linkages.GearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,Cf,Cvgs,'Gear set 1')
 gearset23=linkages.GearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,Cf,Cvgs,'Gear set 2')
 
-load1=loads.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
-load2=loads.SimpleUnknownMechanicalLoad(shaft3,[L/2,0,0],[0,0,0],[],[0],'output torque')
+load_i=loads.KnownLoad(shaft1,[-Lb/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
+load_o=loads.SimpleUnknownLoad(shaft3,[Lb/2,0,0],[0,0,0],[],[0],'output torque')
+#load_splash_shaft1=loads.SplashLoad(shaft1,pgs11,(0,0,0),0.3*r1**2,Cl,Ct,Rl,name)
 
 imposed_speeds=[(bearing1a,0,w)]
 
-mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,bearing3a,bearing3b,gearset12,gearset23],ground,imposed_speeds,[load1],[load2])
+mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,bearing3a,bearing3b,gearset12,gearset23],ground,imposed_speeds,[load_i],[load_o])
 
 
 

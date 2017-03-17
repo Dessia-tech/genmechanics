@@ -9,7 +9,7 @@ Created on Thu Mar 16 15:15:09 2017
 from numpy import array,zeros
 import genmechanics.geometry as geometry
 
-class KnownMechanicalLoad:
+class KnownLoad:
     def __init__(self,part,position,euler_angles,forces,torques,name=''):
         self.part=part
         self.position=position
@@ -20,7 +20,7 @@ class KnownMechanicalLoad:
         
         self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
         
-class UnknownMechanicalLoad:
+class UnknownLoad:
     """
     :param force_directions: a list of directions for force (0,1,2)
     :param torque_directions: a list of directions for torque (0,1,2)
@@ -49,7 +49,7 @@ class UnknownMechanicalLoad:
         self.n_static_unknowns=self.static_matrix.shape[1]
 
 
-class SimpleUnknownMechanicalLoad(UnknownMechanicalLoad):
+class SimpleUnknownLoad(UnknownLoad):
     """
     :param force_directions: a list of directions for force (0,1,2)
     :param torque_directions: a list of directions for torque (0,1,2)
@@ -76,26 +76,32 @@ class SimpleUnknownMechanicalLoad(UnknownMechanicalLoad):
 
         static_require_kinematic=False
 
-        UnknownMechanicalLoad.__init__(self,part,position,euler_angles,static_matrix,
+        UnknownLoad.__init__(self,part,position,euler_angles,static_matrix,
                  static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
                  static_behavior_linear_eq,static_behavior_nonlinear_eq,
                  static_require_kinematic,name)
         
 
-class SplashLoad(UnknownMechanicalLoad):
+class SplashLoad(UnknownLoad):
     """
     Creates a splash force linked to the rotationnal speed around
     """
-    def __init__(self,part,position,euler_angles,area,Cl,Ct,Rl):
+    def __init__(self,part,position,euler_angles,area,Cl,Ct,Rl,name):
         self.Cl=Cl
         self.Ct=Ct
         self.Rl=Rl# limit reynods number
-        static_behavior_occurence_matrix=npy.array([[1]])
+        static_matrix=zeros(6)
+        static_matrix[3]=1# Resistant torque on X
+        static_behavior_occurence_matrix=array([[1]])
         static_behavior_nonlinear_eq_indices=[0]
-        static_behavior_linear_eq=npy.array([])
+        static_behavior_linear_eq=array([])
         static_behavior_nonlinear_eq=[lambda x,w,v:x[0]-self.Cl*w[0]**2 if w[0]>self.Rl else x[0]-self.Ct*w[0]**2]
-        UnknownMechanicalLoad.__init__(self,part,position,euler_angles,force_directions,torque_directions,name='')
+        static_require_kinematic=True
         
+        UnknownLoad.__init__(self,part,position,euler_angles,static_matrix,
+                 static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
+                 static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                 static_require_kinematic,name)        
         
         
         

@@ -54,8 +54,8 @@ gearset12=linkages.GearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,Cf,
 
 imposed_speeds=[(bearing1a,0,w)]
 
-load1=loads.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
-load2=loads.UnknownMechanicalLoad(shaft2,[3*L/2,0,0],[0,0,0],[],[0],'output torque')
+load1=loads.KnownLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
+load2=loads.SimpleUnknownLoad(shaft2,[3*L/2,0,0],[0,0,0],[],[0],'output torque')
 
 mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,gearset12],ground,imposed_speeds,[load1],[load2])
 

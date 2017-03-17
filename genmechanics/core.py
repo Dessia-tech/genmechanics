@@ -225,22 +225,27 @@ class Mechanism:
             self.n_sdof+=linkage.n_static_unknowns
             if linkage.static_require_kinematic:
                 kinematic_analysis_required=True
-        if kinematic_analysis_required:
-            self.kinematic_results
-        
+              
+                  
+        uloads_parts={}
         for load in self.unknown_static_loads:
             load_unknowns=len(load.force_directions)+len(load.torque_directions)
             self.sdof[load]=list(range(self.n_sdof,self.n_sdof+load_unknowns))
             self.n_sdof+=load_unknowns
+            if load.static_require_kinematic:
+                kinematic_analysis_required=True
             
-        # Loading sorting by part
-        uloads_parts={}
-        for load in self.unknown_static_loads:
+            # Loading sorting by part
             try:
                 uloads_parts[load.part].append(load)
             except:
                 uloads_parts[load.part]=[load]
 
+        # Force kinematic computation if required
+        if kinematic_analysis_required:
+            self.kinematic_results
+
+        # Knowns loads sorting by parts
         loads_parts={}
         for load in self.known_static_loads:
             try:
@@ -253,8 +258,8 @@ class Mechanism:
         lparts=len(self.parts)
         M=npy.zeros((6*lparts,self.n_sdof))
         K=npy.zeros((6*lparts,self.n_sdof))
-        F=npy.zeros((6*lparts,1))
-        q=npy.zeros((self.n_sdof,1))
+        F=npy.zeros(6*lparts)
+        q=npy.zeros(self.n_sdof)
         nonlinear_eq={}
 
         # Occurence matrix assembly
@@ -319,8 +324,8 @@ class Mechanism:
                 L=geometry.CrossProductMatrix(uprime)
                 F1=npy.dot(P,load.forces)
                 F2=npy.dot(L,npy.dot(P,load.forces))+npy.dot(P,load.torques)
-                Fe=npy.vstack([F1.reshape((3,1)),F2.reshape((3,1))])
-                F[ip*6:(ip+1)*6,:]-=Fe # minus because of sum is in LHS
+                Fe=npy.hstack([F1.reshape(3),F2.reshape(3)])
+                F[ip*6:(ip+1)*6]-=Fe # minus because of sum is in LHS
         
         neq=6*lparts
         neq_linear=neq
@@ -348,18 +353,24 @@ class Mechanism:
                 # Collecting non linear equations
 #                print(v)
                 if linkage.holonomic:
-                    # Relatives speed in this case
-                    ls=self.LocalLinkageSpeeds(linkage)
-                    w=ls[:3]
-                    v=ls[3:]
+                    if linkage.static_require_kinematic:
+                        # Relatives speed in this case
+                        ls=self.LocalLinkageSpeeds(linkage)
+                        w=ls[:3]
+                        v=ls[3:]
+                    else:
+                        w,v=0,0
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                 else:
-                    # Absolute speed in this case in local coordinate system
-                    s=self.Speeds(linkage.position,self.ground,linkage.part1)
-                    w=npy.dot(linkage.P.T,s[:3])
-                    v=npy.dot(linkage.P.T,s[3:])
-#                    print(w,v)
+                    if linkage.static_require_kinematic:
+                        # Absolute speed in this case in local coordinate system
+                        s=self.Speeds(linkage.position,self.ground,linkage.part1)
+                        w=npy.dot(linkage.P.T,s[:3])
+                        v=npy.dot(linkage.P.T,s[3:])
+                    else:
+                        w,v=0,0
+
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
                         
@@ -367,6 +378,42 @@ class Mechanism:
                 neq+=neq_linkage
                 neq_linear+=neq_linear_linkage
                 
+                
+
+        # behavior equations of unknowns loads
+        for load in self.unknown_static_loads:
+            neq_load=load.static_behavior_occurence_matrix.shape[0]
+            if neq_load>0:
+                # Adding to occurence matrix
+                Me=npy.zeros((neq_load,self.n_sdof))
+                for indof,ndof in enumerate(self.sdof[load]):
+                    Me[:,ndof]+=load.static_behavior_occurence_matrix[:,indof]    
+                M=npy.vstack([M,Me])
+
+                # Adding linear equations to System matrix K
+                neq_linear_load=load.static_behavior_linear_eq.shape[0]
+                if neq_linear_load>0:
+                    Ke=npy.zeros((neq_linear_load,self.n_sdof))
+                    for indof,ndof in enumerate(self.sdof[load]):
+                        Ke[neq_linear:neq_linear+6,ndof]+=load.static_behavior_linear_eq[:,indof]   
+                    K=npy.vstack([K,Ke])
+                    indices_r.extend(range(neq_linear,neq_linear+neq_linear_load))
+
+                # Collecting non linear equations
+
+                if load.static_require_kinematic:
+                    # Absolute speed in this case in local coordinate system
+                    s=self.Speeds(load.position,self.ground,load.part)
+                    w=npy.dot(load.P.T,s[:3])
+                    v=npy.dot(load.P.T,s[3:])
+                else:
+                    w,v=0,0
+                for i,fct in zip(load.static_behavior_nonlinear_eq_indices,load.static_behavior_nonlinear_eq):
+                    nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
+                        
+                # Updating counters
+                neq+=neq_load
+                neq_linear+=neq_linear_load
 
         
         solvable,solvable_var,resolution_order=tools.EquationsSystemAnalysis(M,None)
@@ -384,8 +431,9 @@ class Mechanism:
                 eqs_r=npy.array([indices_r[eq] for eq in eqs])
                 other_vars=npy.array([i for i in range(self.n_sdof) if i not in variables])
                 Kr=K[eqs_r[:,None],npy.array(variables)]
-                Fr=F[eqs_r,:]-npy.dot(K[eqs_r[:,None],other_vars],q[other_vars,:])
-                q[variables,0]=linalg.solve(Kr,Fr)
+                Fr=F[eqs_r]-npy.dot(K[eqs_r[:,None],other_vars],q[other_vars])
+
+                q[variables]=linalg.solve(Kr,Fr)
             else:
                 nl_eqs=[]
                 other_vars=npy.array([i for i in range(self.n_sdof) if i not in variables])
@@ -399,23 +447,23 @@ class Mechanism:
                                 try:
                                     x2.append(x[variables.index(variable)])
                                 except ValueError:
-                                    x2.append(q[variable,0])
+                                    x2.append(q[variable])
                             return f1(x2)
                         nl_eqs.append(f2)
                     except KeyError:
                         # lambdification of linear equations
-                        f2=lambda x,indices_r=indices_r,K=K,F=F,eq=eq,q=q,other_vars=other_vars:npy.dot(K[indices_r[eq],variables],x)-F[indices_r[eq],0]+npy.dot(K[indices_r[eq],other_vars],q[other_vars,:])
+                        f2=lambda x,indices_r=indices_r,K=K,F=F,eq=eq,q=q,other_vars=other_vars:npy.dot(K[indices_r[eq],variables],x)-F[indices_r[eq]]+npy.dot(K[indices_r[eq],other_vars],q[other_vars])
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
                 xs=fsolve(f,npy.zeros(len(variables)))
-                q[variables,0]=xs
+                q[variables]=xs
 
 
         results={}
         for link,dofs in self.sdof.items():
             rlink={}
             for idof,dof in enumerate(dofs):
-                rlink[idof]=q[dof,0]
+                rlink[idof]=q[dof]
             results[link]=rlink
             
         return results        
