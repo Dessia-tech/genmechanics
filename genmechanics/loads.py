@@ -44,7 +44,7 @@ class UnknownMechanicalLoad:
         self.static_require_kinematic=static_require_kinematic
 
         self.name=name
-        print(euler_angles)
+#        print(euler_angles)
         self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
         self.n_static_unknowns=self.static_matrix.shape[1]
 
