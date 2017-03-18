@@ -221,9 +221,9 @@ class GearSetLinkage(NonHolonomicLinkage):
                                      static_behavior_linear_eq,static_behavior_nonlinear_eq,
                                      directions,static_require_kinematic,name)
         
-    def ChangeCoefficients(self,Cf,Cv):
-        self.Cf=Cf
-        self.Cv=Cv
-        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(self.beta)*cos(self.alpha)*max(abs(x[0]),abs(x[1])))+x[2],
-                                      lambda x,w,v: x[1]-x[0]*(Cf*(1+sin(self.beta)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])
-                                      if v[0]*x[0]>0 else x[0]-x[1]*(Cf*(1+sin(self.beta)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])]
+#    def ChangeCoefficients(self,Cf,Cv):
+#        self.Cf=Cf
+#        self.Cv=Cv
+#        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(self.beta)*cos(self.alpha)*max(abs(x[0]),abs(x[1])))+x[2],
+#                                      lambda x,w,v: x[1]-x[0]*(Cf*(1+sin(self.beta)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])
+#                                      if v[0]*x[0]>0 else x[0]-x[1]*(Cf*(1+sin(self.beta)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])]

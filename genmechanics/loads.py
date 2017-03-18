@@ -9,6 +9,8 @@ Created on Thu Mar 16 15:15:09 2017
 from numpy import array,zeros
 import genmechanics.geometry as geometry
 
+import math
+
 class KnownLoad:
     def __init__(self,part,position,euler_angles,forces,torques,name=''):
         self.part=part
@@ -82,24 +84,47 @@ class SimpleUnknownLoad(UnknownLoad):
                  static_require_kinematic,name)
         
 
-class SplashLoad(UnknownLoad):
+class GearSplashLoad(UnknownLoad):
     """
-    Creates a splash force linked to the rotationnal speed around
+    Creates a splash force linked to the rotationnal speed around local X axis
+    :param Rel: Reynolds limit
+    :param d: caracteristic length
+    :param h: height of
     """
-    def __init__(self,part,position,euler_angles,area,radius,Cl,Ct,Rl,mu,name):
+    def __init__(self,part,position,euler_angles,h,radius,Cl,Ct,Rel,nu,d,name):
         self.Cl=Cl
         self.Ct=Ct
-        self.Rl=Rl# limit reynods number
+        self.Rel=Rel# limit reynods number
         self.radius=radius
-        self.mu=mu
-        self.area=area
+        self.nu=nu
+        self.d=d
+        self.h=h
+
+        if h<0:
+            self.area=0
+        elif h<self.radius:
+            hp=self.radius-h
+            self.area=self.radius**2*math.acos(hp/self.radius)-hp*math.sqrt(self.radius**2-hp**2)
+        elif h<2*self.radius:
+            h2=2*self.radius-h
+            hp=self.radius-h2
+            self.area=math.pi*self.radius**2-(self.radius**2*math.acos(hp/self.radius)-hp*math.sqrt(self.radius**2-hp**2))
+        else:
+            self.area=math.pi*self.radius**2
+            
+        
+        self.nuSR=self.area*self.nu*self.radius
+        self.wl=self.Rel*self.nu/self.radius/self.d
         
         static_matrix=zeros((6,1))
         static_matrix[3,0]=1# Resistant torque on X
         static_behavior_occurence_matrix=array([[1]])
         static_behavior_nonlinear_eq_indices=[0]
         static_behavior_linear_eq=array([])
-        static_behavior_nonlinear_eq=[lambda x,w,v:x[0]+self.Cl*self.area*w[0]**2/abs(w[0]) if self.radius**2*w[0]/self.mu<self.Rl else x[0]+abs(w[0])/w[0]*self.Ct*self.area]
+        static_behavior_nonlinear_eq=[lambda x,w,v:
+            x[0]+self.Cl*self.nuSR*w[0]
+            if abs(w[0])<self.wl
+            else x[0]+self.nuSR*(self.Ct*w[0]+(self.Cl-self.Ct)*self.wl*w[0]/abs(w[0]))]
         static_require_kinematic=True
         
         UnknownLoad.__init__(self,part,position,euler_angles,static_matrix,
@@ -108,4 +133,9 @@ class SplashLoad(UnknownLoad):
                  static_require_kinematic,name)        
         
         
-        
+#    def ChangeCoefficients(self,Cl,Ct,Rel,mu):
+#        self.Cf=Cf
+#        self.Cv=Cv
+#        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(self.beta)*cos(self.alpha)*max(abs(x[0]),abs(x[1])))+x[2],
+#                                      lambda x,w,v: x[1]-x[0]*(Cf*(1+sin(self.beta)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])
+#                                      if v[0]*x[0]>0 else x[0]-x[1]*(Cf*(1+sin(self.beta)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])]

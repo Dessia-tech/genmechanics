@@ -594,9 +594,12 @@ class Mechanism:
         
         for load in self.known_static_loads+self.unknown_static_loads:
             flows.append(self.LoadPower(load))
-            orientations.append(0)
             labels.append(load.name)
-            
+            if (load.__class__.__name__=='SimpleUnknownLoad')|(load.__class__.__name__=='KnownLoad'):
+                orientations.append(0)
+            else:
+                orientations.append(-1)
+                
         for linkage in self.linkages:
             flows.append(-self.LinkagePowerLosses(linkage))
             orientations.append(-1)
