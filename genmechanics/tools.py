@@ -7,17 +7,15 @@ Created on Sun Dec  4 20:13:02 2016
 
 import networkx as nx
 
-def EquationsSystemAnalysis(Mo,vars_resoudre,arret_surcontrainte=True):
+def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
     """
-        Analyse d'un système d'équations non redondantes par sa matrice d'occurence
-        et les variables à résoudre
-        :return: False (système non solvable si il existe des parties surcontraintes)
-        si arret_surcontrainte==True
-        sinon, renvoie True, les variables résolvables et l'ordre de résolution
+        Analyse a free equations system given by its ocurence matrix.
+        :return: False (if system is unsolvable) if overconstrain_stop==True
+        else, returns True, the solvable variables and the resolution order
     """
     
-    if vars_resoudre==None:
-        vars_resoudre=range(Mo.shape[1])
+    if vars_to_solve==None:
+        vars_to_solve=range(Mo.shape[1])
     
     
     neq,nvar=Mo.shape
@@ -73,7 +71,7 @@ def EquationsSystemAnalysis(Mo,vars_resoudre,arret_surcontrainte=True):
             if node2 not in G2:
                 G2.append(node2)
     
-    if arret_surcontrainte:
+    if overconstrain_stop:
         if G2!=[]:
 #            print('G2 (sur-contraint): ',G2)
 #            eG2=[int(elem[1:]) for elem in G2 if elem[0]=='e']
@@ -93,10 +91,10 @@ def EquationsSystemAnalysis(Mo,vars_resoudre,arret_surcontrainte=True):
     
 #    print('G3 (sous-contraint): ',G3)
 
-    vars_resolvables=[]
-    for var in vars_resoudre: 
+    solvable_vars=[]
+    for var in vars_to_solve: 
         if not 'v'+str(var) in G2+G3:
-            vars_resolvables.append(var)
+            solvable_vars.append(var)
             
         
     G1=G.copy()
@@ -145,7 +143,7 @@ def EquationsSystemAnalysis(Mo,vars_resoudre,arret_surcontrainte=True):
         isc_vars=[]
         for isc,sc in enumerate(scc):
 #            print(sc)
-            for var in vars_resolvables:
+            for var in solvable_vars:
                 if 'v'+str(var) in sc:
                     isc_vars.append(isc)
                     break
@@ -172,6 +170,6 @@ def EquationsSystemAnalysis(Mo,vars_resoudre,arret_surcontrainte=True):
             ordre_ev.append(([int(e[1:]) for e in evs[0:levs]],[int(v[1:]) for v in evs[levs:]]))
             
 #        print(ordre_ev)        
-        return (True,vars_resolvables,ordre_ev)
+        return (True,solvable_vars,ordre_ev)
         
     return (False,[],None)
