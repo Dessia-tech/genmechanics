@@ -133,9 +133,12 @@ class GearSplashLoad(UnknownLoad):
                  static_require_kinematic,name)        
         
         
-#    def ChangeCoefficients(self,Cl,Ct,Rel,mu):
-#        self.Cf=Cf
-#        self.Cv=Cv
-#        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(self.beta)*cos(self.alpha)*max(abs(x[0]),abs(x[1])))+x[2],
-#                                      lambda x,w,v: x[1]-x[0]*(Cf*(1+sin(self.beta)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])
-#                                      if v[0]*x[0]>0 else x[0]-x[1]*(Cf*(1+sin(self.beta)**2*cos(self.alpha)**2)**0.5-1)+Cv*abs(v[0])]
+    def ChangeCoefficients(self,Cl,Ct,Rel):
+        self.Cl=Cl
+        self.Ct=Ct
+        self.Rel=Rel# limit reynods number
+        self.wl=self.Rel*self.nu/self.radius/self.d
+        self.static_behavior_nonlinear_eq=[lambda x,w,v:
+            x[0]+self.Cl*self.nuSR*w[0]
+            if abs(w[0])<self.wl
+            else x[0]+self.nuSR*(self.Ct*w[0]+(self.Cl-self.Ct)*self.wl*w[0]/abs(w[0]))]
