@@ -11,6 +11,13 @@ from genmechanics import geometry,tools
 from scipy import linalg
 from scipy.optimize import fsolve
 
+class ModelError(Exception):
+    def __init__(self,message):
+        self.message=message
+
+    def __str__(self):
+        return 'Model Error: '+self.message
+
 class Part:
     def __init__(self,name=''):
         self.name=name
@@ -62,6 +69,48 @@ class Mechanism:
         return G
 
     holonomic_graph=property(_get_holonomic_graph)        
+
+    def DrawGraph(self,n_state=None):
+        """
+        Draw graph with tulip
+        """
+        import tulip
+        import tulipgui
+        # Creating tulip graph
+        G=tulip.tlp.newGraph()
+        nodes={}
+        for part in self.parts:
+            nodes[part]=G.addNode()
+        nodes[self.ground]=G.addNode()
+        for linkage in self.linkages:
+            nodes[linkage]=G.addNode()          
+            for part in [linkage.part1,linkage.part2]:
+                G.addEdge(nodes[part],nodes[linkage])
+
+        
+        viewLayout = G.getLayoutProperty("viewLayout")
+        
+        # Apply an FM^3 layout on it
+        fm3pParams = tulip.tlp.getDefaultPluginParameters("FM^3 (OGDF)", G)
+        fm3pParams["Unit edge length"] = 7
+        G.applyLayoutAlgorithm("FM^3 (OGDF)", viewLayout, fm3pParams)
+
+        viewLabel = G.getStringProperty("viewLabel")
+        viewColor = G.getColorProperty("viewColor")
+        viewShape = G.getIntegerProperty("viewShape")
+
+        for comp,node in nodes.items():
+            try:
+                viewLabel[node] = comp.name
+
+            except AttributeError:
+                viewLabel[node] = comp.__class__.__name__
+                viewColor[node]=tulip.tlp.Color.Gray
+                viewShape[node]=tulip.tlp.NodeShape.Cube
+                
+        nodeLinkView = tulipgui.tlpgui.createNodeLinkDiagramView(G)
+
+        raise TypeError
 
     def ChangeImposedSpeeds(self,imposed_speeds):
         self.imposed_speeds=imposed_speeds
@@ -418,6 +467,8 @@ class Mechanism:
         
         solvable,solvable_var,resolution_order=tools.EquationsSystemAnalysis(M,None)
 #        print(resolution_order)
+        if not solvable:
+            raise ModelError('Overconstrained system')
         for eqs,variables in resolution_order:
             linear=True
             linear_eqs=[]

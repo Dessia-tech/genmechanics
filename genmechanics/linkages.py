@@ -84,7 +84,7 @@ class RevoluteLinkage(HolonomicLinkage):
         self.Ca=Ca
         self.Cr=Cr
         self.Cw=Cw
-        static_matrix2=npy.array([[1,0,0,0,0,0],[0,1,0,0,0,0],[0,0,1,0,0,0],[0,0,0,1],[0,0,0,0,1,0],[0,0,0,0,0,1]])
+        static_matrix2=npy.array([[1,0,0,0,0,0],[0,1,0,0,0,0],[0,0,1,0,0,0],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1]])
         static_matrix1=-static_matrix2
         static_behavior_occurence_matrix=npy.array([[1,1,1,1,0,0]])
         static_behavior_nonlinear_eq_indices=[0]
@@ -220,17 +220,40 @@ class LinearAnnularLinkage(HolonomicLinkage):
         self.Cw=Cw
         self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*(Cr*(w[0]**2+x[1]**2)**0.5+Cw*w[0])+x[2] if w[0]!=0 else x[2]]
 
-class AxialStop(HolonomicLinkage):
-    def __init__(self,part1,part2,position,euler_angles,Ca,Cw,name='Axial Stop'):
-        self.Ca=Ca
-        self.Cw=Cw
-        static_matrix2=npy.array([[1,0],[0,0],[0,0],[0,1],[0,0],[0,0]])
+#class AxialStop(HolonomicLinkage):
+#    def __init__(self,part1,part2,position,euler_angles,Ca,Cw,name='Axial Stop'):
+#        self.Ca=Ca
+#        self.Cw=Cw
+#        static_matrix2=npy.array([[1,0],[0,0],[0,0],[0,1],[0,0],[0,0]])
+#        static_matrix1=-static_matrix2
+#        static_behavior_occurence_matrix=npy.array([[1,1]])
+#        static_behavior_nonlinear_eq_indices=[0]
+#        static_behavior_linear_eq=npy.array([])
+#        static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*Ca*abs(x[0])+x[1] if w[0]!=0 else x[1]]
+#        kinematic_matrix=npy.array([[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,0,1,0],[0,0,0,0,1]])
+#        static_require_kinematic=True
+#        HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
+#                                  static_matrix1,static_matrix2,static_behavior_occurence_matrix,
+#                                  static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,
+#                                  static_behavior_nonlinear_eq,kinematic_matrix,
+#                                  static_require_kinematic,name)
+#        
+#        
+#    def ChangeCoefficients(self,Ca,Cw):
+#        self.Ca=Ca
+#        self.Cw=Cw
+#        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*Ca*abs(x[0])+x[1] if w[0]!=0 else x[1]]
+
+
+class RotationalStop(HolonomicLinkage):
+    def __init__(self,part1,part2,position,euler_angles,name='Rotational Stop'):
+        static_matrix2=npy.array([[0],[0],[0],[1],[0],[0]])
         static_matrix1=-static_matrix2
-        static_behavior_occurence_matrix=npy.array([[1,1]])
-        static_behavior_nonlinear_eq_indices=[0]
+        static_behavior_occurence_matrix=npy.array([])
+        static_behavior_nonlinear_eq_indices=[]
         static_behavior_linear_eq=npy.array([])
-        static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*Ca*abs(x[0])+x[1] if w[0]!=0 else x[1]]
-        kinematic_matrix=npy.array([[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,0,1,0],[0,0,0,0,1]])
+        static_behavior_nonlinear_eq=[]
+        kinematic_matrix=npy.array([[0,0,0,0,0],[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1]])
         static_require_kinematic=True
         HolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
                                   static_matrix1,static_matrix2,static_behavior_occurence_matrix,
@@ -238,13 +261,6 @@ class AxialStop(HolonomicLinkage):
                                   static_behavior_nonlinear_eq,kinematic_matrix,
                                   static_require_kinematic,name)
         
-        
-    def ChangeCoefficients(self,Ca,Cw):
-        self.Ca=Ca
-        self.Cw=Cw
-        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*Ca*abs(x[0])+x[1] if w[0]!=0 else x[1]]
-
-
 class GearSetLinkage(NonHolonomicLinkage):
     """
     :param alpha: pressure angle
