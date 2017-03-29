@@ -16,7 +16,7 @@ class Linkage:
                  static_require_kinematic,name=''):
         self.part1=part1
         self.part2=part2
-        self.position=position
+        self.position=npy.array(position)
         self.euler_angles=euler_angles
         self.name=name        
         

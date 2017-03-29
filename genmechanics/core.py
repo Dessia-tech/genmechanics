@@ -112,6 +112,28 @@ class Mechanism:
 
         raise TypeError
 
+    def DrawPowerGraph(self):
+        """
+        Draw graph with tulip
+        """
+
+        # Creating tulip graph
+        G=nx.Graph()
+#        nodes={}
+#        edges={}
+        for part in self.parts:
+            G.add_node(part)
+#        nodes[self.ground]=G.addNode()
+        for linkage in self.linkages:
+            G.add_node(linkage)          
+            for part in [linkage.part1,linkage.part2]:
+                G.add_edge(linkage,part)
+#                edges[linkage,part]=e
+        pos=nx.spring_layout()
+        nx.draw_networkx_nodes(G,pos)
+        nx.draw_networkx_edges(G,pos)
+        nx.draw_networkx_labels(G,pos,labels)
+
     def ChangeImposedSpeeds(self,imposed_speeds):
         self.imposed_speeds=imposed_speeds
         self._utd_kinematic_results=False
@@ -238,6 +260,17 @@ class Mechanism:
         P=npy.dot(s[3:],f[:3])
         P+=npy.dot(f[3:],s[:3])
         return P
+    
+    def TransmittedLinkagePower(self,linkage,num_part):
+        if num_part==1:
+            s=self.Speeds(linkage.position,self.ground,linkage.part2)
+        else:
+            s=self.Speeds(linkage.position,self.ground,linkage.part1)            
+        f=self.GlobalLinkageForces(linkage,num_part)
+        P=npy.dot(s[3:],f[:3])
+        P+=npy.dot(f[3:],s[:3])
+        return P
+        
     
     def _get_static_results(self):
         if not self._utd_static_results:
@@ -507,6 +540,8 @@ class Mechanism:
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
                 xs=fsolve(f,npy.zeros(len(variables)))
+                if npy.sum(npy.abs(f(xs)))>1e-4:
+                    raise ModelError('No convergence of nonlinear phenomena solving'+str(npy.sum(npy.abs(f(xs)))))
                 q[variables]=xs
 
 
@@ -652,9 +687,11 @@ class Mechanism:
                 orientations.append(-1)
                 
         for linkage in self.linkages:
-            flows.append(-self.LinkagePowerLosses(linkage))
-            orientations.append(-1)
-            labels.append(linkage.name)
+            pl=self.LinkagePowerLosses(linkage)
+            if pl!=0:
+                flows.append(-pl)
+                orientations.append(-1)
+                labels.append(linkage.name)
 #            pl.append(0.5*l)
         l=max([abs(f) for f in flows])
 #        pl=[0.1*l]*len(flows)
@@ -665,3 +702,13 @@ class Mechanism:
            orientations=orientations,labels=labels,)
         
         sankey.finish()
+        
+    def VMPlot(self,u=1):
+        import volmdlr as vm
+        points=[]
+        for linkage in self.linkages:
+            points.append(vm.Point3D(linkage.position))
+            points.append(vm.Line3D(vm.Point3D(linkage.position),vm.Point3D(linkage.position+u*linkage.P[:,0])))
+        mdl=vm.VolumeModel(points)
+        mdl.MPLPlot()
+        
