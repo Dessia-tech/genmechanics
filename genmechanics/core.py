@@ -116,23 +116,39 @@ class Mechanism:
         """
         Draw graph with tulip
         """
+        import matplotlib.pyplot as plt
 
         # Creating tulip graph
         G=nx.Graph()
 #        nodes={}
 #        edges={}
+        widths=[]
+        labels={}
         for part in self.parts:
             G.add_node(part)
+            
+            labels[part]=part.name
 #        nodes[self.ground]=G.addNode()
         for linkage in self.linkages:
             G.add_node(linkage)          
-            for part in [linkage.part1,linkage.part2]:
-                G.add_edge(linkage,part)
-#                edges[linkage,part]=e
-        pos=nx.spring_layout()
-        nx.draw_networkx_nodes(G,pos)
-        nx.draw_networkx_edges(G,pos)
+            labels[linkage]=linkage.name
+#            for part in [linkage.part1,linkage.part2]:
+            G.add_edge(linkage,linkage.part1)
+            widths.append(abs(self.TransmittedLinkagePower(linkage,0)))
+            G.add_edge(linkage,linkage.part2)
+            widths.append(abs(self.TransmittedLinkagePower(linkage,1)))
+            
+        max_widths=max(widths)
+        widths=[4*w/max_widths for w in widths]                       
+#        edges[linkage,part]=e
+        plt.figure()
+        pos=nx.spring_layout(G)
+        nx.draw_networkx_nodes(G,pos,nodelist=self.linkages,node_color='grey')
+        nx.draw_networkx_nodes(G,pos,nodelist=self.parts)
         nx.draw_networkx_labels(G,pos,labels)
+        nx.draw_networkx_edges(G,pos,width=widths,edge_color='blue')
+        nx.draw_networkx_edges(G,pos)
+#        nx.draw_networkx_labels(G,pos,labels)
 
     def ChangeImposedSpeeds(self,imposed_speeds):
         self.imposed_speeds=imposed_speeds
