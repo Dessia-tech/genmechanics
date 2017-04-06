@@ -124,6 +124,7 @@ class Mechanism:
 #        edges={}
         widths=[]
         labels={}
+        edges=[]
         for part in self.parts:
             G.add_node(part)
             
@@ -135,18 +136,30 @@ class Mechanism:
 #            for part in [linkage.part1,linkage.part2]:
             G.add_edge(linkage,linkage.part1)
             widths.append(abs(self.TransmittedLinkagePower(linkage,0)))
+            edges.append((linkage,linkage.part1))
             G.add_edge(linkage,linkage.part2)
             widths.append(abs(self.TransmittedLinkagePower(linkage,1)))
+            edges.append((linkage,linkage.part2))
             
+        for load in self.unknown_static_loads+self.known_static_loads:
+            G.add_node(load)
+            G.add_edge(load,load.part)
+            widths.append(abs(self.LoadPower(load)))
+            labels[load]=load.name
+            edges.append((load,load.part))
         max_widths=max(widths)
-        widths=[4*w/max_widths for w in widths]                       
+        print(widths)
+        widths=[6*w/max_widths for w in widths]                       
 #        edges[linkage,part]=e
         plt.figure()
         pos=nx.spring_layout(G)
         nx.draw_networkx_nodes(G,pos,nodelist=self.linkages,node_color='grey')
         nx.draw_networkx_nodes(G,pos,nodelist=self.parts)
+        nx.draw_networkx_nodes(G,pos,nodelist=self.unknown_static_loads,node_color='red')
+        nx.draw_networkx_nodes(G,pos,nodelist=self.known_static_loads,node_color='green')
+        nx.draw_networkx_nodes(G,pos,nodelist=self.parts,node_color='cyan')
         nx.draw_networkx_labels(G,pos,labels)
-        nx.draw_networkx_edges(G,pos,width=widths,edge_color='blue')
+        nx.draw_networkx_edges(G,pos,edges,width=widths,edge_color='blue')
         nx.draw_networkx_edges(G,pos)
 #        nx.draw_networkx_labels(G,pos,labels)
 
