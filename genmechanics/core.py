@@ -148,7 +148,7 @@ class Mechanism:
             labels[load]=load.name
             edges.append((load,load.part))
         max_widths=max(widths)
-        print(widths)
+#        print(widths)
         widths=[6*w/max_widths for w in widths]                       
 #        edges[linkage,part]=e
         plt.figure()
@@ -276,7 +276,7 @@ class Mechanism:
             d=self.GlobalLinkageForces(linkage,0)+self.GlobalLinkageForces(linkage,1)
             df=d[:3]
             dt=d[3:]
-            s=self.Speeds(linkage.position,self.ground,linkage.part1)
+            s=-self.Speeds(linkage.position,self.ground,linkage.part1)
             w=s[:3]
             v=s[3:]
 #            print(df,dt,w,v)
@@ -532,6 +532,7 @@ class Mechanism:
         if not solvable:
             raise ModelError('Overconstrained system')
         for eqs,variables in resolution_order:
+#            print(eqs,variables)
             linear=True
             linear_eqs=[]
             for eq in eqs:
@@ -568,7 +569,7 @@ class Mechanism:
                         f2=lambda x,indices_r=indices_r,K=K,F=F,eq=eq,q=q,other_vars=other_vars:npy.dot(K[indices_r[eq],variables],x)-F[indices_r[eq]]+npy.dot(K[indices_r[eq],other_vars],q[other_vars])
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
-                xs=fsolve(f,npy.zeros(len(variables)))
+                xs=fsolve(f,npy.zeros(len(variables)),full_output=0)
                 if npy.sum(npy.abs(f(xs)))>1e-4:
                     raise ModelError('No convergence of nonlinear phenomena solving'+str(npy.sum(npy.abs(f(xs)))))
                 q[variables]=xs
@@ -686,19 +687,23 @@ class Mechanism:
         M[6*ll:,:]=npy.abs(K[6*ll:,:])>1e-10
         
         solvable,solvable_var,resolution_order=tools.EquationsSystemAnalysis(M,None)
-        for eqs,variables in resolution_order:
-            eqs=npy.array(eqs)
-            other_vars=npy.array([i for i in range(self.n_kdof) if i not in variables])
-            Kr=K[eqs[:,None],npy.array(variables)]
-            Fr=F[eqs,:]-npy.dot(K[eqs[:,None],other_vars],q[other_vars,:])
-            q[variables,:]=linalg.solve(Kr,Fr)
-        results={}
-        for link,dofs in self.kdof.items():
-            rlink={}
-            for idof,dof in enumerate(dofs):
-                rlink[idof]=q[dof,0]
-            results[link]=rlink
-        return results,q
+
+        if solvable:
+            for eqs,variables in resolution_order:
+                eqs=npy.array(eqs)
+                other_vars=npy.array([i for i in range(self.n_kdof) if i not in variables])
+                Kr=K[eqs[:,None],npy.array(variables)]
+                Fr=F[eqs,:]-npy.dot(K[eqs[:,None],other_vars],q[other_vars,:])
+                q[variables,:]=linalg.solve(Kr,Fr)
+            results={}
+            for link,dofs in self.kdof.items():
+                rlink={}
+                for idof,dof in enumerate(dofs):
+                    rlink[idof]=q[dof,0]
+                results[link]=rlink
+            return results,q
+        else:
+            raise ModelError
     
     def GlobalSankey(self):
         from matplotlib.sankey import Sankey

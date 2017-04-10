@@ -88,16 +88,20 @@ class GearSplashLoad(UnknownLoad):
     """
     Creates a splash force linked to the rotationnal speed around local X axis
     :param Rel: Reynolds limit
-    :param d: caracteristic length
-    :param h: height of
+    :param d: caracteristic length. Default value: radius
+    :param h: height of wet surface of gear
     """
-    def __init__(self,part,position,euler_angles,h,radius,Cl,Ct,Rel,nu,d,name):
+    def __init__(self,part,position,euler_angles,h,radius,Cl,Ct,Rel,nu,d=None,name='Splash load'):
         self.Cl=Cl
         self.Ct=Ct
         self.Rel=Rel# limit reynods number
         self.radius=radius
         self.nu=nu
+        
+        if d==None:
+            d=radius            
         self.d=d
+            
         self.h=h
 
         if h<0:
