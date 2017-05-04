@@ -150,24 +150,7 @@ class FrictionlessLinearAnnularLinkage(HolonomicLinkage):
                                   static_behavior_linear_eq,static_behavior_nonlinear_eq,
                                   kinematic_matrix,static_require_kinematic,name)
 
-# To be reimplemented from GearSetLinkage
-#class FrictionlessGearSetLinkage(NonHolonomicLinkage):
-#    def __init__(self,part1,part2,position,euler_angles,alpha,beta,name=''):
-#        self.alpha=alpha
-#        self.beta=beta
-#        static_matrix2=npy.array([[cos(beta)*cos(alpha),0],[sin(alpha),0],[0,-1],[0,0],[0,0],[0,0]])
-#        static_matrix1=-static_matrix2
-#        static_behavior_occurence_matrix=npy.array([[1,1]])
-#        static_behavior_nonlinear_eq_indices=[0]
-#        static_behavior_linear_eq=npy.array([])
-#        static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(alpha)*cos(beta)*x[0])-x[1]]
-#        directions=[npy.array([1,0,0])]
-#        static_require_kinematic=False
-#        NonHolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
-#                                     static_matrix1,static_matrix2,static_behavior_occurence_matrix,
-#                                     static_behavior_nonlinear_eq_indices,
-#                                     static_behavior_linear_eq,static_behavior_nonlinear_eq,
-#                                     directions,static_require_kinematic,name)
+
 
 class BallLinkage(HolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,Ca,Cr,Cw,name='Ball Linkage'):
@@ -260,7 +243,38 @@ class RotationalStop(HolonomicLinkage):
                                   static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,
                                   static_behavior_nonlinear_eq,kinematic_matrix,
                                   static_require_kinematic,name)
+   
+class FrictionLessGearSetLinkage(NonHolonomicLinkage):
+    """
+    :param alpha: pressure angle
+    :param beta: helix angle
+    """
+    def __init__(self,part1,part2,position,euler_angles,alpha,beta,name='Gear Set Linkage'):
+        self.alpha=alpha# pressure angle
+        self.beta=beta# hélix angle
         
+        static_matrix2=npy.array([[cos(beta)*cos(alpha),0],[sin(beta),0],[0,-1],[0,0],[0,0],[0,0]])
+        static_matrix1=-static_matrix2
+        static_behavior_occurence_matrix=npy.array([[1,1]])
+        static_behavior_nonlinear_eq_indices=[0]
+        static_behavior_linear_eq=npy.array([])
+        static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(beta)*cos(alpha)*abs(x[0]))+x[1]]
+        directions=[npy.array([1,0,0])]
+        static_require_kinematic=True
+        NonHolonomicLinkage.__init__(self,part1,part2,position,euler_angles,
+                                     static_matrix1,static_matrix2,static_behavior_occurence_matrix,
+                                     static_behavior_nonlinear_eq_indices,
+                                     static_behavior_linear_eq,static_behavior_nonlinear_eq,
+                                     directions,static_require_kinematic,name)
+        
+
+    def ChangeParameters(self,alpha,beta):
+        self.alpha=alpha
+        self.beta=beta
+        self.static_matrix2=npy.array([[cos(beta)*cos(alpha),0,0],[sin(beta),0,0],[0,0,-1],[0,0,0],[0,0,0],[0,0,0]])
+        self.static_matrix1=npy.array([[0,cos(beta)*cos(alpha),0],[0,sin(beta),0],[0,0,1],[0,0,0],[0,0,0],[0,0,0]])
+        self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(sin(beta)*cos(alpha)*abs(x[0]))+x[1]]
+
 class GearSetLinkage(NonHolonomicLinkage):
     """
     :param alpha: pressure angle
