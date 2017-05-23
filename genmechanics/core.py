@@ -122,8 +122,6 @@ class Mechanism:
 
         <style type="text/css">
             #mynetwork {
-                width: 600px;
-                height: 400px;
                 border: 1px solid lightgray;
             }
         </style>
