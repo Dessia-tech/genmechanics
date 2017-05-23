@@ -10,6 +10,8 @@ import networkx as nx
 from genmechanics import geometry,tools
 from scipy import linalg
 from scipy.optimize import fsolve
+import webbrowser
+import os
 
 class ModelError(Exception):
     def __init__(self,message):
@@ -111,6 +113,66 @@ class Mechanism:
         nodeLinkView = tulipgui.tlpgui.createNodeLinkDiagramView(G)
 
         raise TypeError
+        
+    def DrawVisJSGraph(self):
+        s="""<html>
+        <head>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.20.0/vis.min.js"></script>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.20.0/vis.min.css" rel="stylesheet" type="text/css" />
+
+        <style type="text/css">
+            #mynetwork {
+                width: 600px;
+                height: 400px;
+                border: 1px solid lightgray;
+            }
+        </style>
+    </head>
+    <body>
+    <div id="mynetwork"></div>
+    
+    <script type="text/javascript">
+    var nodes = new vis.DataSet([\n"""
+        index={}
+        for ipart,part in enumerate(self.parts+[self.ground]):
+            index[part]=ipart
+            s+="{{id: {}, label: '{}'}},\n".format(ipart,part.name)
+#        s+=']);\n'
+        n=len(self.parts)+1
+#        index[self.ground]=n
+#        n+=1
+        for il,linkage in enumerate(self.linkages):
+            index[linkage]=n+il
+            s+="{{id: {}, label: '{}'}},\n".format(n+il,linkage.name)
+        s+=']);\n'
+
+        s+="var edges = new vis.DataSet(["
+        for linkage in self.linkages:            
+            s+='{{from: {}, to: {}}},\n'.format(index[linkage],index[linkage.part1])
+            s+='{{from: {}, to: {}}},\n'.format(index[linkage],index[linkage.part2])
+        s+=']);'
+
+        s+="""
+    // create a network
+    var container = document.getElementById('mynetwork');
+
+    // provide the data in the vis format
+    var data = {
+        nodes: nodes,
+        edges: edges
+    };
+    var options = {};
+
+    // initialize your network!
+    var network = new vis.Network(container, data, options);
+</script>
+</body>
+</html>"""
+
+        with open('gm_graph_viz.html','w') as file:
+            file.write(s)
+        
+        webbrowser.open('file://' + os.path.realpath('gm_graph_viz.html'))
 
     def DrawPowerGraph(self):
         """
