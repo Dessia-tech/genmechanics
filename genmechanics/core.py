@@ -806,3 +806,90 @@ class Mechanism:
         mdl=vm.VolumeModel(points)
         mdl.MPLPlot()
         
+    def BabylonJS(self):
+        s="""
+        <!doctype html>
+<html>
+<head>
+   <meta charset="utf-8">
+   <title>Babylon - Basic scene</title>
+   <style>
+      html, body {
+         overflow: hidden;
+         width: 100%;
+         height: 100%;
+         margin: 0;
+         padding: 0;
+      }
+      #renderCanvas {
+         width: 100%;
+         height: 100%;
+         touch-action: none;
+      }
+   </style>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/babylonjs/2.5.0/babylon.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/handjs/1.3.11/hand.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script> <!-- optional physics engine -->
+</head>
+<body>
+   <canvas id="renderCanvas"></canvas>
+   <script type="text/javascript">
+      // Get the canvas element from our HTML below
+      var canvas = document.querySelector("#renderCanvas");
+      // Load the BABYLON 3D engine
+      var engine = new BABYLON.Engine(canvas, true);
+      // -------------------------------------------------------------
+      // Here begins a function that we will 'call' just after it's built
+      var createScene = function () {
+         // Now create a basic Babylon Scene object
+         var scene = new BABYLON.Scene(engine);
+         // Change the scene background color to green.
+         scene.clearColor = new BABYLON.Color3(0., 0.7, 0.7);
+         // This creates and positions a free camera
+         var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+         var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 1, 0.8, 10, new BABYLON.Vector3(0, 0, 0), scene);
+         // This targets the camera to scene origin
+         camera.setTarget(BABYLON.Vector3.Zero());
+         // This attaches the camera to the canvas
+         camera.attachControl(canvas, false);
+         // This creates a light, aiming 0,1,0 - to the sky.
+         var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+         // Dim the light a small amount
+         light.intensity = .5;
+         """
+         
+#         // Let's try our built-in 'sphere' shape. Params: name, subdivisions, size, scene
+#         var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
+#         // Move the sphere upward 1/2 its height
+#         sphere.position.y = 1;
+#         // Let's try our built-in 'ground' shape. Params: name, width, depth, subdivisions, scene
+#         var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
+
+        for linkage in self.linkages:
+            s+='var sphere = BABYLON.Mesh.CreateSphere("sphere1", 10, 0.01, scene);\n'
+            s+="sphere.position=new BABYLON.Vector3({},{},{});\n".format(*linkage.position)             
+        s+="""
+         // Leave this function
+         return scene;
+      }; // End of createScene function
+      // -------------------------------------------------------------
+      // Now, call the createScene function that you just finished creating
+      var scene = createScene();
+      // Register a render loop to repeatedly render the scene
+      engine.runRenderLoop(function () {
+         scene.render();
+      });
+      // Watch for browser/canvas resize events
+      window.addEventListener("resize", function () {
+         engine.resize();
+      });
+   </script>
+</body>
+</html>
+
+        """
+        with open('gm_babylonjs.html','w') as file:
+            file.write(s)
+        
+        webbrowser.open('file://' + os.path.realpath('gm_babylonjs.html'))
+        
