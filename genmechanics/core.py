@@ -806,7 +806,33 @@ class Mechanism:
         mdl=vm.VolumeModel(points)
         mdl.MPLPlot()
         
+    def SceneCaracteristics(self):
+        min_vect=self.linkages[0].position.copy()
+        max_vect=self.linkages[0].position.copy()
+        center=self.linkages[0].position.copy()
+        n=1
+        for linkage in self.linkages[1:]+self.known_static_loads+self.unknown_static_loads:
+            print(linkage)
+            for i,(xmin,xmax,xi) in enumerate(zip(min_vect,max_vect,linkage.position)):
+                print(i,xmin,xmax,xi)
+                if xi<xmin:
+                    min_vect[i]=xi
+                    print('min',min_vect)
+                if xi>xmax:
+                    max_vect[i]=xi
+                    print('max',max_vect)
+            print(linkage,linkage.position)
+            center+=linkage.position
+            n+=1
+        
+        center=center/n
+        print(min_vect,max_vect)
+        max_length=linalg.norm(min_vect-max_vect)
+        print(center,max_length)
+        return center,max_length
+    
     def BabylonJS(self):
+        center,length=self.SceneCaracteristics()
         s="""
         <!doctype html>
 <html>
@@ -843,15 +869,19 @@ class Mechanism:
       var createScene = function () {
          // Now create a basic Babylon Scene object
          var scene = new BABYLON.Scene(engine);
-         // Change the scene background color to green.
-         scene.clearColor = new BABYLON.Color3(0., 0.7, 0.7);
          // This creates and positions a free camera
-         var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
-         var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 1, 0.8, 10, new BABYLON.Vector3(0, 0, 0), scene);
-         // This targets the camera to scene origin
-         camera.setTarget(BABYLON.Vector3.Zero());
-         // This attaches the camera to the canvas
-         camera.attachControl(canvas, false);
+         //var plane = BABYLON.Mesh.CreatePlane("plane", 10.0, scene);
+         """
+         
+         
+#        s+='var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3({}, {}, {}), scene);'.format(*center)
+        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., {}, new BABYLON.Vector3({}, {}, {}), scene);\n'.format(4*length,*center)
+#        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., 15, new BABYLON.Vector3(0,0,0), scene);'
+        s+='camera.panningSensibility={};\n'.format(30)
+        s+='camera.pinchPrecision={};\n'.format(20)
+        s+='camera.wheelPrecision={};\n'.format(20)
+        s+="""
+        camera.attachControl(canvas, false);
          // This creates a light, aiming 0,1,0 - to the sky.
          var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
          // Dim the light a small amount
@@ -866,7 +896,7 @@ class Mechanism:
 #         var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
 
         for linkage in self.linkages:
-            s+='var sphere = BABYLON.Mesh.CreateSphere("sphere1", 10, 0.01, scene);\n'
+            s+='var sphere = BABYLON.Mesh.CreateSphere("sphere1", 15., {}, scene);\n'.format(length/30)
             s+="sphere.position=new BABYLON.Vector3({},{},{});\n".format(*linkage.position)             
         s+="""
          // Leave this function
