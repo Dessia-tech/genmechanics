@@ -33,6 +33,32 @@ class Linkage:
                 
         self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
         
+    def Babylon(self,length,forces,torques):
+        xa,za,ya=self.P[:,0]
+#        theta=math.acos(z/self.width)
+#        phi=math.atan(y/x)
+        x,z,y=self.position
+        s="""
+        var sphere = BABYLON.Mesh.CreateSphere("{} center", 15., {}, scene);
+        sphere.position=new BABYLON.Vector3({},{},{});    
+        var lineX = BABYLON.Mesh.CreateDashedLines("{} axis", [
+            new BABYLON.Vector3({}, {}, {}),
+            new BABYLON.Vector3({}, {}, {})
+        ],0.05,0.05,10, scene);
+        """.format(self.name,length/30,x,y,z,self.name,x-0.5*xa,y-0.5*ya,z-0.5*za,x+0.5*xa,y+0.5*ya,z+0.5*za)
+        
+        if forces is not None:
+#            print(forces)
+#            for i,fi in enumerate(forces):
+            s+="""var lineF = BABYLON.Mesh.CreateLines("{} axis", [
+            new BABYLON.Vector3({}, {}, {}),
+            new BABYLON.Vector3({}, {}, {})
+        ], scene);
+            lineF.color=new BABYLON.Color3(1,0,0);""".format('force {}'.format(self.name),x,y,z,x+forces[0],y+forces[1],z+forces[2])
+                
+        
+        return s
+        
         
 
 class HolonomicLinkage(Linkage):

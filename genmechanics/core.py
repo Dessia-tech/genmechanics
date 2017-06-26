@@ -12,6 +12,7 @@ from scipy import linalg
 from scipy.optimize import fsolve
 import webbrowser
 import os
+from jinja2 import Environment, PackageLoader, select_autoescape
 
 class ModelError(Exception):
     def __init__(self,message):
@@ -773,7 +774,9 @@ class Mechanism:
         
         
         for load in self.known_static_loads+self.unknown_static_loads:
-            flows.append(self.LoadPower(load))
+            pl=self.LoadPower(load)
+            print(pl)
+            flows.append(pl)
             labels.append(load.name)
             if (load.__class__.__name__=='SimpleUnknownLoad')|(load.__class__.__name__=='KnownLoad'):
                 orientations.append(0)
@@ -782,7 +785,8 @@ class Mechanism:
                 
         for linkage in self.linkages:
             pl=self.LinkagePowerLosses(linkage)
-            if pl!=0:
+#            print(pl)
+            if pl!=0.:
                 flows.append(-pl)
                 orientations.append(-1)
                 labels.append(linkage.name)
@@ -812,114 +816,172 @@ class Mechanism:
         center=self.linkages[0].position.copy()
         n=1
         for linkage in self.linkages[1:]+self.known_static_loads+self.unknown_static_loads:
-            print(linkage)
+#            print(linkage)
             for i,(xmin,xmax,xi) in enumerate(zip(min_vect,max_vect,linkage.position)):
-                print(i,xmin,xmax,xi)
+#                print(i,xmin,xmax,xi)
                 if xi<xmin:
                     min_vect[i]=xi
-                    print('min',min_vect)
+#                    print('min',min_vect)
                 if xi>xmax:
                     max_vect[i]=xi
-                    print('max',max_vect)
-            print(linkage,linkage.position)
+#                    print('max',max_vect)
+#            print(linkage,linkage.position)
             center+=linkage.position
             n+=1
         
         center=center/n
-        print(min_vect,max_vect)
+#        print(min_vect,max_vect)
         max_length=linalg.norm(min_vect-max_vect)
-        print(center,max_length)
+#        print(center,max_length)
         return center,max_length
     
-    def BabylonJS(self):
-        center,length=self.SceneCaracteristics()
-        s="""
-        <!doctype html>
-<html>
-<head>
-   <meta charset="utf-8">
-   <title>Babylon - Basic scene</title>
-   <style>
-      html, body {
-         overflow: hidden;
-         width: 100%;
-         height: 100%;
-         margin: 0;
-         padding: 0;
-      }
-      #renderCanvas {
-         width: 100%;
-         height: 100%;
-         touch-action: none;
-      }
-   </style>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/babylonjs/2.5.0/babylon.js"></script>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/handjs/1.3.11/hand.js"></script>
-   <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script> <!-- optional physics engine -->
-</head>
-<body>
-   <canvas id="renderCanvas"></canvas>
-   <script type="text/javascript">
-      // Get the canvas element from our HTML below
-      var canvas = document.querySelector("#renderCanvas");
-      // Load the BABYLON 3D engine
-      var engine = new BABYLON.Engine(canvas, true);
-      // -------------------------------------------------------------
-      // Here begins a function that we will 'call' just after it's built
-      var createScene = function () {
-         // Now create a basic Babylon Scene object
-         var scene = new BABYLON.Scene(engine);
-         // This creates and positions a free camera
-         //var plane = BABYLON.Mesh.CreatePlane("plane", 10.0, scene);
-         """
-         
-         
-#        s+='var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3({}, {}, {}), scene);'.format(*center)
-        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., {}, new BABYLON.Vector3({}, {}, {}), scene);\n'.format(4*length,*center)
-#        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., 15, new BABYLON.Vector3(0,0,0), scene);'
-        s+='camera.panningSensibility={};\n'.format(30)
-        s+='camera.pinchPrecision={};\n'.format(20)
-        s+='camera.wheelPrecision={};\n'.format(20)
-        s+="""
-        camera.attachControl(canvas, false);
-         // This creates a light, aiming 0,1,0 - to the sky.
-         var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
-         // Dim the light a small amount
-         light.intensity = .5;
-         """
-         
-#         // Let's try our built-in 'sphere' shape. Params: name, subdivisions, size, scene
-#         var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
-#         // Move the sphere upward 1/2 its height
-#         sphere.position.y = 1;
-#         // Let's try our built-in 'ground' shape. Params: name, width, depth, subdivisions, scene
-#         var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
+            
+    def BabylonScript(self,forces=True):
 
-        for linkage in self.linkages:
-            s+='var sphere = BABYLON.Mesh.CreateSphere("sphere1", 15., {}, scene);\n'.format(length/30)
-            s+="sphere.position=new BABYLON.Vector3({},{},{});\n".format(*linkage.position)             
-        s+="""
-         // Leave this function
-         return scene;
-      }; // End of createScene function
-      // -------------------------------------------------------------
-      // Now, call the createScene function that you just finished creating
-      var scene = createScene();
-      // Register a render loop to repeatedly render the scene
-      engine.runRenderLoop(function () {
-         scene.render();
-      });
-      // Watch for browser/canvas resize events
-      window.addEventListener("resize", function () {
-         engine.resize();
-      });
-   </script>
-</body>
-</html>
-
-        """
-        with open('gm_babylonjs.html','w') as file:
-            file.write(s)
+        env = Environment(loader=PackageLoader('genmechanics', 'templates'),
+                          autoescape=select_autoescape(['html', 'xml']))
         
-        webbrowser.open('file://' + os.path.realpath('gm_babylonjs.html'))
+        template = env.get_template('babylon.html')
+        
+        center,length=self.SceneCaracteristics()
+        
+        if forces:
+            max_force=0.
+            max_torque=0
+            for linkage in self.linkages:
+                f=self.GlobalLinkageForces(linkage,0)[0:3]
+                t=self.GlobalLinkageForces(linkage,0)[3:]
+                max_force=max(max_force,max(f))
+                max_torque=max(max_torque,max(t))
+            
+            for load in self.known_static_loads+self.unknown_static_loads:
+                f=self.GlobalLoadForces(load)[0:3]
+                t=self.GlobalLoadForces(load)[3:]
+                max_force=max(max_force,max(f))
+                max_torque=max(max_torque,max(t))
+                
+            print(max_force,max_torque)
+        
+                
+        linkages_strings=[]
+        for linkage in self.linkages:
+            try:
+                if forces:
+#                    print([f/max_force/length/4 for f in self.GlobalLoadForces(load)[0:3]])
+                    linkages_strings.append(linkage.Babylon(length,
+                                                            [f/max_force*length/4 for f in self.GlobalLinkageForces(linkage,0)[0:3]],
+                                                            [f/max_torque*length/4 for f in self.GlobalLinkageForces(linkage,0)[3:]]))
+                else:
+                    linkages_strings.append(linkage.Babylon(length,None,None))
+
+            except AttributeError:
+                print('error')
+                pass
+        
+        
+            
+            
+        return template.render(name=self.name,center=tuple(center),length=length,
+                               linkages_strings=linkages_strings)
+    
+    def BabylonShow(self,page='gm_babylonjs',forces=True):
+        page+='.html'
+        print(self.BabylonScript())
+        with open(page,'w') as file:
+            file.write(self.BabylonScript())
+        
+        webbrowser.open('file://' + os.path.realpath(page))
+    
+#    def BabylonJS(self):
+#        center,length=self.SceneCaracteristics()
+#        s="""
+#        <!doctype html>
+#<html>
+#<head>
+#   <meta charset="utf-8">
+#   <title>Babylon - Basic scene</title>
+#   <style>
+#      html, body {
+#         overflow: hidden;
+#         width: 100%;
+#         height: 100%;
+#         margin: 0;
+#         padding: 0;
+#      }
+#      #renderCanvas {
+#         width: 100%;
+#         height: 100%;
+#         touch-action: none;
+#      }
+#   </style>
+#   <script src="https://cdnjs.cloudflare.com/ajax/libs/babylonjs/2.5.0/babylon.js"></script>
+#   <script src="https://cdnjs.cloudflare.com/ajax/libs/handjs/1.3.11/hand.js"></script>
+#   <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script> <!-- optional physics engine -->
+#</head>
+#<body>
+#   <canvas id="renderCanvas"></canvas>
+#   <script type="text/javascript">
+#      // Get the canvas element from our HTML below
+#      var canvas = document.querySelector("#renderCanvas");
+#      // Load the BABYLON 3D engine
+#      var engine = new BABYLON.Engine(canvas, true);
+#      // -------------------------------------------------------------
+#      // Here begins a function that we will 'call' just after it's built
+#      var createScene = function () {
+#         // Now create a basic Babylon Scene object
+#         var scene = new BABYLON.Scene(engine);
+#         // This creates and positions a free camera
+#         //var plane = BABYLON.Mesh.CreatePlane("plane", 10.0, scene);
+#         """
+#         
+#         
+##        s+='var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3({}, {}, {}), scene);'.format(*center)
+#        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., {}, new BABYLON.Vector3({}, {}, {}), scene);\n'.format(4*length,*center)
+##        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., 15, new BABYLON.Vector3(0,0,0), scene);'
+#        s+='camera.panningSensibility={};\n'.format(30)
+#        s+='camera.pinchPrecision={};\n'.format(20)
+#        s+='camera.wheelPrecision={};\n'.format(20)
+#        s+="""
+#        camera.attachControl(canvas, false);
+#         // This creates a light, aiming 0,1,0 - to the sky.
+#         var light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+#         // Dim the light a small amount
+#         light.intensity = .5;
+#         """
+#         
+##         // Let's try our built-in 'sphere' shape. Params: name, subdivisions, size, scene
+##         var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
+##         // Move the sphere upward 1/2 its height
+##         sphere.position.y = 1;
+##         // Let's try our built-in 'ground' shape. Params: name, width, depth, subdivisions, scene
+##         var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
+#
+#        for linkage in self.linkages:
+#            s+='var sphere = BABYLON.Mesh.CreateSphere("sphere1", 15., {}, scene);\n'.format(length/30)
+#            s+="sphere.position=new BABYLON.Vector3({},{},{});\n".format(*linkage.position)    
+##            s+="var lines = BABYLON.Mesh.CreateLines("lines", [    new BABYLON.Vector3(-10, 0, 0)"
+#        s+="""
+#         // Leave this function
+#         return scene;
+#      }; // End of createScene function
+#      // -------------------------------------------------------------
+#      // Now, call the createScene function that you just finished creating
+#      var scene = createScene();
+#      // Register a render loop to repeatedly render the scene
+#      engine.runRenderLoop(function () {
+#         scene.render();
+#      });
+#      // Watch for browser/canvas resize events
+#      window.addEventListener("resize", function () {
+#         engine.resize();
+#      });
+#   </script>
+#</body>
+#</html>
+#
+#        """
+#        with open('gm_babylonjs.html','w') as file:
+#            file.write(s)
+#        
+#        webbrowser.open('file://' + os.path.realpath('gm_babylonjs.html'))
         
