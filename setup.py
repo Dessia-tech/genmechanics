@@ -5,14 +5,20 @@ Setup install script for genmechanics
 """
 
 from setuptools import setup
-import genmechanics
 
 def readme():
     with open('README.rst') as f:
         return f.read()
 
+def version_scheme(version):
+    return '.'.join([str(i) for i in version.tag._key[1]])
+
+def local_scheme(version):
+    return ''
+
 setup(name='genmechanics',
-      version=genmechanics.__version__,# in genmechanics __init__
+      use_scm_version={'version_scheme':version_scheme,'local_scheme':local_scheme},
+      setup_requires=['setuptools_scm'],
       description='General mechanics solver for python',
       long_description=readme(),
       keywords='General mechanics',
