@@ -39,7 +39,7 @@ class Linkage:
 #        phi=math.atan(y/x)
         x,z,y=self.position
         s="""
-        var sphere = BABYLON.Mesh.CreateSphere("{} center", 15., {}, scene);
+        var sphere = BABYLON.Mesh.CreateSphere("{} center", 8, {}, scene);
         sphere.position=new BABYLON.Vector3({},{},{});    
         var lineX = BABYLON.Mesh.CreateDashedLines("{} axis", [
             new BABYLON.Vector3({}, {}, {}),

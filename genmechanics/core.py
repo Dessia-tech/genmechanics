@@ -886,7 +886,7 @@ class Mechanism:
     
     def BabylonShow(self,page='gm_babylonjs',forces=True):
         page+='.html'
-        print(self.BabylonScript())
+#        print(self.BabylonScript())
         with open(page,'w') as file:
             file.write(self.BabylonScript())
         

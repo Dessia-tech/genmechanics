@@ -42,15 +42,14 @@ def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
 #    pos=nx.spring_layout(G)
 #    nx.draw(G,pos)
 #    nx.draw_networkx_labels(G,pos)
-    
-    M=nx.bipartite.maximum_matching(G)
-#    print('M',M,len(M))
-    
-    for n1,n2 in M.items():
-#        print(n1,n2)
-        Gp.add_edge(n1,n2)        
-
+               
+    for Gi in nx.connected_component_subgraphs(G):
+        M=nx.bipartite.maximum_matching(Gi)
+    #    print('M',M,len(M))
         
+        for n1,n2 in M.items():
+    #        print(n1,n2)
+            Gp.add_edge(n1,n2)    
     
 #    pos=nx.spring_layout(Gp)
 #    plt.figure()
@@ -106,9 +105,9 @@ def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
 #    nx.draw(G1,pos)
 #    nx.draw_networkx_labels(G1,pos)
     
-    M1=nx.bipartite.maximum_matching(G1)
+#    M1=nx.bipartite.maximum_matching(G1)
     G1p=nx.DiGraph()
-    
+
     G1p.add_nodes_from(G1.nodes())
     for e in G1.edges():
         # equation vers variable
@@ -116,13 +115,18 @@ def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
             G1p.add_edge(e[0],e[1])        
         else:
             G1p.add_edge(e[1],e[0])   
-#    print(len(M))
-    for n1,n2 in M1.items():
-#        print(n1,n2)
-        if n1[0]=='e':
-            G1p.add_edge(n1,n2)        
-        else:
-            G1p.add_edge(n2,n1)        
+
+    
+    for G1i in nx.connected_component_subgraphs(G1):
+        M1=nx.bipartite.maximum_matching(G1i)
+    
+
+        for n1,n2 in M1.items():
+    #        print(n1,n2)
+            if n1[0]=='e':
+                G1p.add_edge(n1,n2)        
+            else:
+                G1p.add_edge(n2,n1)
             
         
     scc=list(nx.strongly_connected_components(G1p))
@@ -159,7 +163,7 @@ def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
 #        print('ancetres: ',ancetres_var)
 #        ordre_sc=nx.topological_sort_recursive(C,reverse=False)
 #        print(ancetres_vars)
-        ordre_sc=[sc for sc in nx.topological_sort(C,reverse=False) if sc in ancetres_vars]
+        ordre_sc=[sc for sc in nx.topological_sort(C) if sc in ancetres_vars]
 #        print(ordre_sc)
         ordre_ev=[]
         for isc in ordre_sc:            
