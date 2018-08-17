@@ -38,8 +38,10 @@ def get_version():
             version = version[1:]
         # PEP 440 compatibility
         if '-' in version:
-            if version.endswith('-dirty'):
-                version = '.dev'.join(version.split('-')[:2])
+#            if version.endswith('-dirty'):
+            version = '.dev'.join(version.split('-')[:2])+'-dirty'
+        else:
+            version = '.dev'.join(version.split('-')[:2])
 
     else:
         # Extract the version from the PKG-INFO file.
