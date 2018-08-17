@@ -10,14 +10,8 @@ def readme():
     with open('README.rst') as f:
         return f.read()
 
-def version_scheme(version):
-    return '.'.join([str(i) for i in version.tag._key[1]])
-
-def local_scheme(version):
-    return ''
-
 setup(name='genmechanics',
-      use_scm_version={'version_scheme':version_scheme,'local_scheme':local_scheme},
+      use_scm_version={'write_to':'genmechanics/version.py'},
       setup_requires=['setuptools_scm'],
       description='General mechanics solver for python',
       long_description=readme(),
