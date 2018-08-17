@@ -39,7 +39,7 @@ def get_version():
         # PEP 440 compatibility
         if '-' in version:
             if version.endswith('-dirty'):
-                version = '.post'.join(version.split('-')[:2])
+                version = '.dev'.join(version.split('-')[:2])
 
     else:
         # Extract the version from the PKG-INFO file.
@@ -49,6 +49,7 @@ def get_version():
     # Writing to file
     with open('genmechanics/version.py', 'w') as vf:
         vf.write("# -*- coding: utf-8 -*-\nversion = '{}'".format(version))
+                 
     return version
 
 
