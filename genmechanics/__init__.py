@@ -8,6 +8,6 @@ Created on Wed Nov 16 14:17:10 2016
 
 from .core import *
 
-import version
+import pkg_resources
 
-__version__ =  version.version
+__version__ = pkg_resources.require("genmechanics")[0].version
