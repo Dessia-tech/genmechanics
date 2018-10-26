@@ -1,0 +1,2 @@
+recursive-include genmechanics/ *.py
+recursice-exclude __pycache__/ *
