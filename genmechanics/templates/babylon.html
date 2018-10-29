@@ -34,13 +34,15 @@
 var createScene = function () {
     // This creates a basic Babylon Scene object (non-mesh)
         var scene = new BABYLON.Scene(engine);
-	var cam = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0, 0, 2*{{length}}, new BABYLON.Vector3{{center}}, scene);
+	//var cam = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0, 0, 2*{{length}}, new BABYLON.Vector3{{center}}, scene);
+  var cam = new BABYLON.UniversalCamera("UniversalCamera", new BABYLON.Vector3{{center}}, scene);
+  cam.speed = {{length}}/25.
 	cam.wheelPrecision=50./{{length}};
 	cam.pinchPrecision=250./{{length}};
 	cam.panningSensibility=250./{{length}};
 	cam.minZ=0.01*{{length}};
 	cam.attachControl(canvas);
-        
+
 
 	var light1 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 	light1.intensity=0.6;
@@ -55,7 +57,7 @@ var createScene = function () {
 	    new BABYLON.Vector3(1, 0, 0)
 	], scene);
 	lineX.color = new BABYLON.Color3(1, 0, 0);
-       
+
 	var lineY = BABYLON.Mesh.CreateLines("Y", [
 	    new BABYLON.Vector3(0, 0, 0),
 	    new BABYLON.Vector3(0, 0, 1)
@@ -67,14 +69,14 @@ var createScene = function () {
 	    new BABYLON.Vector3(0, 1, 0)
 	], scene);
        	lineZ.color = new BABYLON.Color3(0, 0, 1);
-       
- 
+
+
 
 	{% for s in linkages_strings %}
 		{{s|safe}}
-  	{% endfor %}	
-	
-	
+  	{% endfor %}
+
+
 	return scene;	  };
 
       var scene = createScene();

@@ -708,9 +708,12 @@ class Mechanism:
         # Non holonomic equations
         for linkage in nhl:
             # Speed computation
-            path=nx.shortest_path(self.holonomic_graph,linkage.part1,linkage.part2)
+            try:
+                path=nx.shortest_path(self.holonomic_graph,linkage.part1,linkage.part2)
+            except nx.NetworkXNoPath:
+                raise ModelError('No path between {} and {} for linkage {} of type {}'.format(linkage.part1.name, linkage.part2.name, linkage.name, linkage.__class__.__name__))
             V=npy.zeros((3,self.n_kdof))
-            for il,linkage2 in enumerate(path):
+            for il, linkage2 in enumerate(path):
                 if not linkage2.__class__.__name__=='Part':
                     try:
                         if path[il+1]==linkage2.part2:
