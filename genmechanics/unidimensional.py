@@ -95,6 +95,8 @@ class Spring(Linkage):
         y2 = self.body2.y_position
         ax.plot([x1, x2], [y1, y2], linestyle='--', color=color)
         
+    def Strains(self, positions):
+        return self.stiffness*(self.free_length - (positions[1] - positions[0]))
         
 
 class CompressionSpring(Spring):
@@ -147,15 +149,15 @@ class UnilateralContact(Linkage):
         h = 0.5*linkages_width
         
         if self.contact_distance > 0:
-            xplate1 = x1 + 0.49*(self.contact_distance)
-            xplate2 = x2 - 0.49*(self.contact_distance)
+            xplate1 = x1 + 0.5*(self.contact_distance)
+            xplate2 = x2 - 0.5*(self.contact_distance)
             xt1 = [x1, xplate1, xplate1, xplate1]
             yt1 = [y1, ym, ym+h, ym-h]
             xt2 = [x2, xplate2, xplate2, xplate2]
             yt2 = [y2, ym, ym+h, ym-h]
         else:
-            xplate1 = x1 + 0.51*(self.contact_distance)
-            xplate2 = x2 - 0.51*(self.contact_distance)
+            xplate1 = x1 + 0.5*(self.contact_distance)
+            xplate2 = x2 - 0.5*(self.contact_distance)
             xturn1 = x1 + 0.55*(self.contact_distance)
             xturn2 = x2 - 0.55*(self.contact_distance)
             xt1 = [x1, xturn1, xturn1, xplate1, xplate1, xplate1]
@@ -339,7 +341,7 @@ class UnidimensionalModel:
 #        return A
         b = npy.hstack((F, Fd))
 #        print(A, b)
-        if linalg.det(A) == 0:
+        if abs(linalg.det(A)) < 1e-10:
             res = linalg.lstsq(A, b)
 #            print(res)
             x = res[0]
@@ -351,7 +353,6 @@ class UnidimensionalModel:
 #                print(ires, res)
                 if ires < ndof:
                     if res > strains_tol:
-                        print(res)
                         strains_violation.append((ires, res))
 #                else:
 #                    if res > strains_tol:
@@ -375,7 +376,7 @@ class UnidimensionalModel:
                 else:
                     strains[element] = [x[dof_element]]
 
-        return SpringModelResults(self, activated_nonlinear_linkages, displacements, strains)
+        return UnidimensionalModelResults(self, activated_nonlinear_linkages, displacements, strains)
     
     def Solve(self, max_iters=100):
         iters = 0
@@ -487,7 +488,7 @@ class UnidimensionalModel:
         ax.autoscale()
         return fig, ax
         
-class SpringModelResults:
+class UnidimensionalModelResults:
     def __init__(self, model, activated_nonlinear_linkages, displacements, strains):
         self.model = model
         self.activated_nonlinear_linkages = activated_nonlinear_linkages

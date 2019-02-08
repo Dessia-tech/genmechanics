@@ -83,6 +83,8 @@ for i in range(nsteps):
     # b1
     u1 = result.displacements[s1.body1]
     u2 = result.displacements[s1.body2]
+    print(s1.Strains((u1, u2)))
+    
     if u2 - u1 < 0:
         strain_bearing1.append(-k1*(u2-u1))
     else:
