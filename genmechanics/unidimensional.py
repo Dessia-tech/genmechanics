@@ -95,6 +95,14 @@ class Spring(Linkage):
         y2 = self.body2.y_position
         ax.plot([x1, x2], [y1, y2], linestyle='--', color=color)
         
+        xm = 0.5*(x1 + x2)
+        ym = 0.5*(y1 + y2)
+        
+        ax.text(xm, ym-0.5*linkages_width,
+                '{} #{}'.format(self.__class__.__name__, str(self.__hash__())[-5:]),
+                horizontalalignment='center')
+
+        
     def Strains(self, positions):
         return self.stiffness*(self.free_length - (positions[1] - positions[0]))
         
@@ -168,27 +176,30 @@ class UnilateralContact(Linkage):
             
         ax.plot(xt1, yt1, color=color)
         ax.plot(xt2, yt2, color=color)
-#        ax.plot(xplate2)
+        ax.text(0.5*(x1+x2), ym-0.5*linkages_width,
+                'Unilateral contact #{}'.format(str(self.__hash__())[-5:]),
+                horizontalalignment='center')
         
         if strains is not None:
-            strain = strains[self][0]
+            if self in strains:
+                strain = strains[self][0]
            
             
-            if strain < 1e-6:
-                ax.add_patch(Arrow(xplate1, ym,
-                 -strain*intensity_factor, 0, linkages_width, color='r'))
-                ax.add_patch(Arrow(xplate2, ym,
-                 strain*intensity_factor, 0, linkages_width, color='r'))
-            elif strain > -1e-6:
-                ax.add_patch(Arrow(xplate1 - strain*intensity_factor, ym,
-                 strain*intensity_factor, 0, linkages_width, color='r'))
-                ax.add_patch(Arrow(xplate2 + strain*intensity_factor, ym,
-                 -strain*intensity_factor, 0, linkages_width, color='r'))
-            
-            if abs(strain) > 1e-6:
-                ax.text(xplate1, ym+0.5*linkages_width,
-                        '{} N'.format(round(strain, 3)), color='k',
-                        horizontalalignment='center')
+                if strain < 1e-6:
+                    ax.add_patch(Arrow(xplate1, ym,
+                     -strain*intensity_factor, 0, linkages_width, color='r'))
+                    ax.add_patch(Arrow(xplate2, ym,
+                     strain*intensity_factor, 0, linkages_width, color='r'))
+                elif strain > -1e-6:
+                    ax.add_patch(Arrow(xplate1 - strain*intensity_factor, ym,
+                     strain*intensity_factor, 0, linkages_width, color='r'))
+                    ax.add_patch(Arrow(xplate2 + strain*intensity_factor, ym,
+                     -strain*intensity_factor, 0, linkages_width, color='r'))
+                
+                if abs(strain) > 1e-6:
+                    ax.text(xplate1, ym+0.5*linkages_width,
+                            '{} N'.format(round(strain, 3)), color='k',
+                            horizontalalignment='center')
         
 class ModelSolvingError(Exception):
     def __init__(self, strain_violation):
@@ -198,6 +209,15 @@ class ModelSolvingError(Exception):
 
 #        self.displacement_violation = displacement_violation
         self.strain_violation = strain_violation
+        
+class ModelConvergenceError(Exception):
+    def __init__(self, iters):
+
+        # Call the base class constructor with the parameters it needs
+        super().__init__('Number of iteration exceeded: {}'.format(iters))
+
+#        self.displacement_violation = displacement_violation
+        self.iters = iters
     
 class UnidimensionalModel:
     """
@@ -225,6 +245,8 @@ class UnidimensionalModel:
         return G
     
     def PlotGraph(self, activated_nonlinar_linkages=None):
+        if activated_nonlinar_linkages is None:
+            activated_nonlinar_linkages = self.nonlinear_linkages
         plt.figure()
         G = self.Graph(activated_nonlinar_linkages)
         pos={}
@@ -382,53 +404,23 @@ class UnidimensionalModel:
         iters = 0
         activated_nonlinear_linkages = []
         new_activated_nonlinear_linkages = self.nonlinear_linkages[:]
-#        new_activated_nonlinear_linkages = []
-#        for linkage in self.nonlinear_linkages:
-#            linkage_pos = (linkage.body1.initial_position, linkage.body1.initial_position)
-#            if linkage.ActivationCondition(linkage_pos):
-#                new_activated_nonlinear_linkages.append(linkage)
-#        self.SolveLinear(activated_non_linear_linkages)
-#        results = []
+
         while (set(new_activated_nonlinear_linkages) != set(activated_nonlinear_linkages)) and iters < max_iters:
-#            print('======== Iter n° {} ======='.format(iters))
-#            print(len(activated_nonlinear_linkages))
-#            print([a.name for a in new_activated_nonlinear_linkages])
-#            print('activated', [a.name for a in activated_nonlinear_linkages])
+
             activated_nonlinear_linkages = new_activated_nonlinear_linkages[:]
             additional_linkages = []
             while not self.IsModelValid(activated_nonlinear_linkages+additional_linkages):
                 
-#                self.PlotGraph(activated_nonlinear_linkages)
-                # Modifying by adding linkages to have a valid model
                 disactivated_linkages = [l for l in self.nonlinear_linkages if not l in activated_nonlinear_linkages]
-#                print(disactivated_linkages)
                 nla = random.choice(range(1, len(disactivated_linkages)))
-#                print('nla', nla)
                 additional_linkages = list(random.sample(disactivated_linkages, nla))
-#                raise RuntimeError
-#            print('add', additional_linkages, self.IsModelValid(activated_nonlinear_linkages+additional_linkages))
             activated_nonlinear_linkages.extend(additional_linkages)
             
             try:
                 result = self.LinearSolve(activated_nonlinear_linkages)
             except ModelSolvingError as e:
-#                print(e.strain_violation)
-#                self.PlotGraph(activated_nonlinear_linkages)
                 raise RuntimeError
             
-#            # Regularisation
-#            if iters>0:
-#                displacement2 = {}
-#                for b, u1 in result.displacements.items():
-#                    u0 = old_result.displacements[b]
-#                    u2 = u0*regularisation_coeff + (1-regularisation_coeff)*u1
-#                    displacement2[b] = u2
-#                    print(u0, u1, u2)
-#                result.displacements = displacement2
-            
-#            print({b.name: r for b, r in result.displacements.items()})
-#            results.append(result)
-#            print(results)
             new_activated_nonlinear_linkages = []
             disactivated_nonlinear_linkages = []
             for linkage in self.nonlinear_linkages:
@@ -448,18 +440,24 @@ class UnidimensionalModel:
                     if linkage.ActivationCondition(positions, reactions):
                         new_activated_nonlinear_linkages.append(linkage)
             iters += 1
-#            print('acti)
-#            print('disactivated_nonlinear_linkages', [a.name for a in disactivated_nonlinear_linkages])
-#        if iters == max_iters:
-#            raise RuntimeError
+
+        if max_iters == iters:
+#            self.Plot()
+#            self.PlotGraph()
+#            print(self.linear_linkages, self.nonlinear_linkages)
+#            print(self.imposed_displacements)
+            raise ModelConvergenceError(iters)
             
         result = self.LinearSolve(activated_nonlinear_linkages)
         return result
         
             
     
-    def Plot(self, activated_nonlinear_linkages = [], bodies_positions=None,
+    def Plot(self, activated_nonlinear_linkages = None, bodies_positions=None,
              strains={}, ax=None, color='k', linkages_width=0.006, intensity_factor=1e-6):
+        
+        if activated_nonlinear_linkages is None:
+            activated_nonlinear_linkages = self.nonlinear_linkages
         
         if bodies_positions is None:
             bodies_positions = {b:b.initial_position for b in self.bodies}
