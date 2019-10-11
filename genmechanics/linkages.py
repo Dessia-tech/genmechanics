@@ -10,15 +10,20 @@ from math import cos,sin
 import genmechanics.geometry as geometry
 
 class Linkage:
-    def __init__(self,part1,part2,position,euler_angles,static_matrix1,static_matrix2,
-                 static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
-                 static_behavior_linear_eq,static_behavior_nonlinear_eq,
+    def __init__(self,
+                 part1, part2, position,
+                 euler_angles,
+                 static_matrix1, static_matrix2,
+                 static_behavior_occurence_matrix,
+                 static_behavior_nonlinear_eq_indices,
+                 static_behavior_linear_eq,
+                 static_behavior_nonlinear_eq,
                  static_require_kinematic,name=''):
-        self.part1=part1
-        self.part2=part2
-        self.position=npy.array(position)
-        self.euler_angles=euler_angles
-        self.name=name        
+        self.part1 = part1
+        self.part2 = part2
+        self.position = npy.array(position)
+        self.euler_angles = euler_angles
+        self.name = name        
         
         self.static_matrix1=static_matrix1
         self.static_matrix2=static_matrix2
@@ -62,7 +67,8 @@ class Linkage:
         
 
 class HolonomicLinkage(Linkage):
-    holonomic=True
+    holonomic = True
+    
     def __init__(self,part1,part2,position,euler_angles,static_matrix1,static_matrix2,
                  static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
                  static_behavior_linear_eq,static_behavior_nonlinear_eq,
@@ -77,11 +83,17 @@ class HolonomicLinkage(Linkage):
     
         
 class NonHolonomicLinkage(Linkage):
-    holonomic=False
-    def __init__(self,part1,part2,position,euler_angles,static_matrix1,static_matrix2,
-                 static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
-                 static_behavior_linear_eq,static_behavior_nonlinear_eq,
-                 kinematic_directions,static_require_kinematic=False,name=''):
+    holonomic = False
+    
+    def __init__(self,
+                 part1, part2, position, euler_angles,
+                 static_matrix1, static_matrix2,
+                 static_behavior_occurence_matrix, 
+                 static_behavior_nonlinear_eq_indices,
+                 static_behavior_linear_eq, static_behavior_nonlinear_eq,
+                 kinematic_directions,
+                 static_require_kinematic=False, name=''):
+        
         Linkage.__init__(self,part1,part2,position,euler_angles,static_matrix1,static_matrix2,
                          static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
                          static_behavior_linear_eq,static_behavior_nonlinear_eq,

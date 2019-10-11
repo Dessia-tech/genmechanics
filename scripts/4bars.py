@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+4 bars mechanism
+"""
+
+import volmdlr as vm
+from genmechanics.dynamic_positions import Part, RevoluteLinkage, MovingMechanism
+
+ground = Part('ground')
+rod1 = Part('rod 1')
+rod2 = Part('rod 2')
+rod3 = Part('rod 3')
+
+l1 = 0.15
+l2 = 0.18
+l3 = 0.16
+h = 0.17
+
+linkage1 = RevoluteLinkage(ground, vm.Point3D((-0.5*h, 0, 0)), vm.z3D,
+                           rod1,  vm.Point3D((-0.5*l1, 0, 0)), 'l1')
+linkage2 = RevoluteLinkage(rod2, vm.Point3D((-0.5*l2,0, 0)), vm.z3D,
+                           rod1, vm.Point3D((0.5*l1, 0, 0)), 'l2')
+linkage3 = RevoluteLinkage(rod3, vm.Point3D((-0.5*l3, 0, 0,)), vm.z3D,
+                           rod2, vm.Point3D((0.5*l2,0, 0)), 'l3')
+linkage4 = RevoluteLinkage(rod3, vm.Point3D((0.5*l3, 0, 0, )), vm.z3D,
+                           ground, vm.Point3D((0.5*h, 0, 0)), 'l4')
+
+mechanism = MovingMechanism([linkage1, linkage2, linkage3, linkage4], ground, '3 bar')
+#
+configuration = mechanism.solve_configurations({0: [0.01, 0.05, 0.15, 0.2, 0.25,
+                                                    0.3, 0.35, 0.4, 0.45, 0.5, 0.6,
+                                                    0.7, 0.8, 0.9, 1, 1.2, 1.4, 1.6,
+                                                    1.8, 2, 2.2, 2.4, 2.6, 2.8, 3,
+                                                    3.2, 3.4, 3.6, 3.8, 4, 4.2, 4.4,
+                                                    4.6, 4.8, 5, 5.2, 5.4, 5.6]})
+configuration.plot2D()
+
+configuration.plot_kinematic_parameters(linkage1, 0, linkage4, 0)
+
+#manual_configuration = MechanismConfiguration(mechanism, [3.1415/4, 3.1415/8, -3.1415/3])
+#manual_configuration.plot2D()
+
+#f = mechanism.part_frame(rod2, [3.1415/8, -3.1415/8, -3.1415/10])
+
+#reduced_mechanism = MovingMechanism([l1, l2, l3], ground, '3 bar')
+#manual_configuration_reduced_mechanism = MechanismConfiguration(reduced_mechanism, [0.37, 0.15, -0.04])
+#manual_configuration_reduced_mechanism.plot2D()

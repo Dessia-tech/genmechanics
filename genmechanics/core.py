@@ -1,57 +1,93 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Nov 16 11:06:30 2016
 
-@author: steven
 """
 
+from itertools import combinations
 import numpy as npy
 import networkx as nx
-from genmechanics import geometry,tools
+from genmechanics import geometry, tools
 from scipy import linalg
 from scipy.optimize import fsolve
+
+from dessia_common import DessiaObject
+
+import volmdlr as vm
+
+
 import webbrowser
 import os
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 class ModelError(Exception):
-    def __init__(self,message):
-        self.message=message
+    def __init__(self, message):
+        self.message = message
 
     def __str__(self):
-        return 'Model Error: '+self.message
+        return 'Model Error: ' + self.message
 
 class Part:
-    def __init__(self,name=''):
-        self.name=name
-        
-        
+    def __init__(self, name='', interest_points=None):
+        if interest_points is None:
+            self.interest_points = []
+        else:
+            self.interest_points = interest_points
+            
+        self.name = name
+
+    @classmethod
+    def wireframe_lines(cls, points):
+        if len(points) == 2:
+            return [vm.LineSegment3D(points[0], points[1])]
+        else:
+            lines = []
+            full_graph = nx.Graph()
+            full_graph.add_nodes_from(points)
+            points.append(vm.Point3D.mean_point(points))
+            for point1, point2 in combinations(points, 2):
+                full_graph.add_edge(point1, point2, weight=point1.PointDistance(point2))
+            
+            wireframe_graph = nx.minimum_spanning_tree(full_graph)
+            for point1, point2 in wireframe_graph.edges():
+                lines.append(vm.LineSegment3D(point1, point2))
+            
+            return lines
+
 class Mechanism:
-    def __init__(self,linkages,ground,imposed_speeds,known_static_loads,unknown_static_loads,name=''):
-        self.linkages=linkages
-        self.ground=ground
-        self.name=name
-        self.imposed_speeds=imposed_speeds
-        self.known_static_loads=known_static_loads
-        self.unknown_static_loads=unknown_static_loads
-        
-        self._utd_kinematic_results=False
-        self._utd_static_results=False
-        
-        
+    def __init__(self,
+                 linkages,
+                 ground,
+                 imposed_speeds,
+                 known_static_loads,
+                 unknown_static_loads,
+                 name=''):
+
+        self.linkages = linkages
+        self.ground = ground
+        self.name = name
+        self.imposed_speeds = imposed_speeds
+        self.known_static_loads = known_static_loads
+        self.unknown_static_loads = unknown_static_loads
+
+        self._utd_kinematic_results = False
+        self._utd_static_results = False
+
+        self._holonomic_paths = {}
+
+
     def _get_parts(self):
-        parts=[]
+        parts = []
         for linkage in self.linkages:
             for part in [linkage.part1,linkage.part2]:
                 if not part in parts:
-                    if part!=self.ground:
+                    if part != self.ground:
                         parts.append(part)
         return parts
 
-    parts=property(_get_parts)
+    parts = property(_get_parts)
 
     def _get_graph(self):
-        G=nx.Graph()
+        G = nx.Graph()
         G.add_nodes_from(self.parts)
         for linkage in self.linkages:
             G.add_node(linkage)
@@ -59,10 +95,10 @@ class Mechanism:
             G.add_edge(linkage,linkage.part2)
         return G
 
-    graph=property(_get_graph)
+    graph = property(_get_graph)
 
     def _get_holonomic_graph(self):
-        G=nx.Graph()
+        G = nx.Graph()
         G.add_nodes_from(self.parts)
         for linkage in self.linkages:
             if linkage.holonomic:
@@ -71,51 +107,58 @@ class Mechanism:
                 G.add_edge(linkage,linkage.part2)
         return G
 
-    holonomic_graph=property(_get_holonomic_graph)        
+    holonomic_graph = property(_get_holonomic_graph)
 
-    def DrawGraph(self,n_state=None):
-        """
-        Draw graph with tulip
-        """
-        import tulip
-        import tulipgui
-        # Creating tulip graph
-        G=tulip.tlp.newGraph()
-        nodes={}
-        for part in self.parts:
-            nodes[part]=G.addNode()
-        nodes[self.ground]=G.addNode()
+    def _settings_path(self, part1, part2):
+        if (part1, part2) in self._settings_paths:
+            return self._settings_paths[part1, part2]
+        elif (part2, part1) in self._settings_paths:
+            path = [(p2, linkage, not linkage_side, p1)\
+                    for (p1, linkage, linkage_side, p2)\
+                        in self._settings_paths[part2, part1][::-1]]
+            self._settings_paths[part1, part2] = path
+            return self._settings_paths[part1, part2]
+        else:
+            path = []
+            raw_path = list(nx.shortest_path(self.settings_graph, part1, part2))
+#            print('rp', raw_path)
+            for part1, linkage, part2 in zip(raw_path[:-2:2], raw_path[1::2], raw_path[2::2]+[part2]):
+                path.append((part1, linkage, linkage.part1==part1, part2))
+
+            self._settings_paths[part1, part2] = path
+            return path
+        
+    def settings_graph(self):
+        graph = self.holonomic_graph.copy()
+        deleted_linkages = []
+        for cycle in nx.cycle_basis(graph):
+            ground_distance = [(l, len(nx.shortest_path(graph, l, self.ground)))\
+                               for l in cycle\
+                               if l in self.linkages\
+                                   and not l in deleted_linkages\
+                                   and not l.positions_require_kinematic_parameters
+                               ]
+#            print(ground_distance)
+            linkage_to_delete = max(ground_distance, key=lambda x:x[1])[0]
+#            print(linkage_to_delete)
+            deleted_linkages.append(linkage_to_delete)
+            graph.remove_node(linkage_to_delete)
+        
+        self.linkages_kinematic_setting = [l for l in self.linkages if l not in deleted_linkages]
+        self.settings_graph = graph
+
+    def part_linkages(self):
+        part_linkages = {}
         for linkage in self.linkages:
-            nodes[linkage]=G.addNode()          
-            for part in [linkage.part1,linkage.part2]:
-                G.addEdge(nodes[part],nodes[linkage])
+            for part in (linkage.part1, linkage.part2):
+                if not part in part_linkages:
+                    part_linkages[part] = [linkage]
+                else:
+                    part_linkages[part].append(linkage)
+        return part_linkages
 
-        
-        viewLayout = G.getLayoutProperty("viewLayout")
-        
-        # Apply an FM^3 layout on it
-        fm3pParams = tulip.tlp.getDefaultPluginParameters("FM^3 (OGDF)", G)
-        fm3pParams["Unit edge length"] = 7
-        G.applyLayoutAlgorithm("FM^3 (OGDF)", viewLayout, fm3pParams)
 
-        viewLabel = G.getStringProperty("viewLabel")
-        viewColor = G.getColorProperty("viewColor")
-        viewShape = G.getIntegerProperty("viewShape")
-
-        for comp,node in nodes.items():
-            try:
-                viewLabel[node] = comp.name
-
-            except AttributeError:
-                viewLabel[node] = comp.__class__.__name__
-                viewColor[node]=tulip.tlp.Color.Gray
-                viewShape[node]=tulip.tlp.NodeShape.Cube
-                
-        nodeLinkView = tulipgui.tlpgui.createNodeLinkDiagramView(G)
-
-        raise TypeError
-        
-    def DrawVisJSGraph(self):
+    def plot_graph(self):
         s="""<html>
         <head>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.20.0/vis.min.js"></script>
@@ -129,7 +172,7 @@ class Mechanism:
     </head>
     <body>
     <div id="mynetwork"></div>
-    
+
     <script type="text/javascript">
     var nodes = new vis.DataSet([\n"""
         index={}
@@ -146,7 +189,7 @@ class Mechanism:
         s+=']);\n'
 
         s+="var edges = new vis.DataSet(["
-        for linkage in self.linkages:            
+        for linkage in self.linkages:
             s+='{{from: {}, to: {}}},\n'.format(index[linkage],index[linkage.part1])
             s+='{{from: {}, to: {}}},\n'.format(index[linkage],index[linkage.part2])
         s+=']);'
@@ -170,7 +213,7 @@ class Mechanism:
 
         with open('gm_graph_viz.html','w') as file:
             file.write(s)
-        
+
         webbrowser.open('file://' + os.path.realpath('gm_graph_viz.html'))
 
     def DrawPowerGraph(self):
@@ -188,11 +231,11 @@ class Mechanism:
         edges=[]
         for part in self.parts:
             G.add_node(part)
-            
+
             labels[part]=part.name
 #        nodes[self.ground]=G.addNode()
         for linkage in self.linkages:
-            G.add_node(linkage)          
+            G.add_node(linkage)
             labels[linkage]=linkage.name
 #            for part in [linkage.part1,linkage.part2]:
             G.add_edge(linkage,linkage.part1)
@@ -201,7 +244,7 @@ class Mechanism:
             G.add_edge(linkage,linkage.part2)
             widths.append(abs(self.TransmittedLinkagePower(linkage,1)))
             edges.append((linkage,linkage.part2))
-            
+
         for load in self.unknown_static_loads+self.known_static_loads:
             G.add_node(load)
             G.add_edge(load,load.part)
@@ -210,7 +253,7 @@ class Mechanism:
             edges.append((load,load.part))
         max_widths=max(widths)
 #        print(widths)
-        widths=[6*w/max_widths for w in widths]                       
+        widths=[6*w/max_widths for w in widths]
 #        edges[linkage,part]=e
         plt.figure()
         pos=nx.spring_layout(G)
@@ -224,7 +267,7 @@ class Mechanism:
         nx.draw_networkx_edges(G,pos)
 #        nx.draw_networkx_labels(G,pos,labels)
 
-    def ChangeImposedSpeeds(self,imposed_speeds):
+    def ChangeImposedSpeeds(self, imposed_speeds):
         self.imposed_speeds=imposed_speeds
         self._utd_kinematic_results=False
         self._utd_static_results=False# Change of speeds might change resistant forces: update needed
@@ -233,8 +276,8 @@ class Mechanism:
         self.known_static_loads=known_static_loads
         self.unknown_static_loads=unknown_static_loads
         self._utd_static_results=False
-        
-        
+
+
     def Speeds(self,position,part_ref,part):
         """
         Speeds from point belonging to part with part_ref as reference
@@ -247,29 +290,29 @@ class Mechanism:
             if not linkage2.__class__.__name__=='Part':
                 try:
                     if path[il+1]==linkage2.part2:
-                        side=1                            
+                        side=1
                     else:
                         side=-1
                 except IndexError:
                     # linkage is last element of list
                     if path[il-1]==linkage2.part1:
-                        side=1     
+                        side=1
                     else:
                         side=-1
                 # It's really a linkage
-                P=geometry.Euler2TransferMatrix(*linkage2.euler_angles)            
+                P=geometry.Euler2TransferMatrix(*linkage2.euler_angles)
                 u=linkage2.position
                 uprime=u-position
                 L=geometry.CrossProductMatrix(uprime)
                 Ve=npy.dot(L,npy.dot(P,linkage2.kinematic_matrix[:3,:]))+npy.dot(P,linkage2.kinematic_matrix[3:,:])
                 We=npy.dot(P,linkage2.kinematic_matrix[:3,:])
                 for indof,ndof in enumerate(self.kdof[linkage2]):
-                    V[:,ndof]+=side*Ve[:,indof] 
-                    W[:,ndof]+=side*We[:,indof] 
-                
+                    V[:,ndof]+=side*Ve[:,indof]
+                    W[:,ndof]+=side*We[:,indof]
+
         return npy.hstack((npy.dot(W,q).flatten(),npy.dot(V,q).flatten()))
 
-    
+
     def LocalLinkageSpeeds(self,linkage):
         """
         :returns: relative speed of linkage in local linkage coordinate system
@@ -286,7 +329,7 @@ class Mechanism:
             w=npy.dot(linkage.P,s[3:])
 #            return npy.dot(linkage.P,s)
             return npy.hstack((w,v)).flatten()
-    
+
     def LocalLinkageForces(self,linkage,num_part):
         """
         :returns :Local forces of linkage on part given by its number (0 for part1, 1 for part2)
@@ -305,19 +348,19 @@ class Mechanism:
         F[:3]=npy.dot(P,lf[:3])
         F[3:]=npy.dot(P,lf[3:])
         return F
-    
+
     def LocalLoadForces(self,load):
         try:
             F=npy.zeros(6)
             F[:3]=load.forces
             F[3:]=load.torques
             return F
-        except AttributeError:       
+        except AttributeError:
             r=self.static_results[load]# results
             vr=npy.array([r[i] for i in range(load.n_static_unknowns)])#vector of results
             return npy.dot(load.static_matrix,vr)
 
-    
+
     def GlobalLoadForces(self,load):
         f=self.LocalLoadForces(load)
 #        print(f)
@@ -327,7 +370,7 @@ class Mechanism:
         F[3:]=npy.dot(load.P,f[3:]).flatten()
         return F
 
-    
+
     def LinkagePowerLosses(self,linkage):
         if linkage.holonomic:
             tf=self.LocalLinkageForces(linkage,0)
@@ -343,25 +386,25 @@ class Mechanism:
 #            print(df,dt,w,v)
             return npy.dot(df,v)+npy.dot(dt,w)
 
-            
+
     def LoadPower(self,load):
         s=self.Speeds(load.position,self.ground,load.part)
         f=self.GlobalLoadForces(load)
         P=npy.dot(s[3:],f[:3])
         P+=npy.dot(f[3:],s[:3])
         return P
-    
+
     def TransmittedLinkagePower(self,linkage,num_part):
         if num_part==1:
             s=self.Speeds(linkage.position,self.ground,linkage.part2)
         else:
-            s=self.Speeds(linkage.position,self.ground,linkage.part1)            
+            s=self.Speeds(linkage.position,self.ground,linkage.part1)
         f=self.GlobalLinkageForces(linkage,num_part)
         P=npy.dot(s[3:],f[:3])
         P+=npy.dot(f[3:],s[:3])
         return P
-        
-    
+
+
     def _get_static_results(self):
         if not self._utd_static_results:
             self._static_results=self._StaticAnalysis()
@@ -369,7 +412,7 @@ class Mechanism:
         return self._static_results
 
     static_results=property(_get_static_results)
-        
+
     def _get_kinematic_results(self):
         if not self._utd_kinematic_results:
             self._kinematic_results,self._kinematic_vector=self._KinematicAnalysis()
@@ -377,7 +420,7 @@ class Mechanism:
         return self._kinematic_results
 
     kinematic_results=property(_get_kinematic_results)
-    
+
     def _get_kinematic_vector(self):
         if not self._utd_kinematic_results:
             self._kinematic_results,self._kinematic_vector=self._KinematicAnalysis()
@@ -386,7 +429,7 @@ class Mechanism:
 
     kinematic_vector=property(_get_kinematic_vector)
 
-        
+
     def _StaticAnalysis(self):
         # Static parametrisation
         self.sdof={}
@@ -397,8 +440,8 @@ class Mechanism:
             self.n_sdof+=linkage.n_static_unknowns
             if linkage.static_require_kinematic:
                 kinematic_analysis_required=True
-              
-                  
+
+
         uloads_parts={}
         for load in self.unknown_static_loads:
             load_unknowns=load.static_matrix.shape[1]
@@ -406,7 +449,7 @@ class Mechanism:
             self.n_sdof+=load_unknowns
             if load.static_require_kinematic:
                 kinematic_analysis_required=True
-            
+
             # Loading sorting by part
             try:
                 uloads_parts[load.part].append(load)
@@ -424,9 +467,9 @@ class Mechanism:
                 loads_parts[load.part].append(load)
             except:
                 loads_parts[load.part]=[load]
-                
-                
-        
+
+
+
         lparts=len(self.parts)
         M=npy.zeros((6*lparts,self.n_sdof))
         K=npy.zeros((6*lparts,self.n_sdof))
@@ -438,7 +481,7 @@ class Mechanism:
         for ip,part in enumerate(self.parts):
             # linkage contribution to the LHS
             for linkage in self.graph[part].keys():
-                P=geometry.Euler2TransferMatrix(*linkage.euler_angles)            
+                P=geometry.Euler2TransferMatrix(*linkage.euler_angles)
                 u=linkage.position
                 uprime=u
                 L=geometry.CrossProductMatrix(uprime)
@@ -446,28 +489,28 @@ class Mechanism:
                     static_matrix=linkage.static_matrix1
                 else:
                     static_matrix=linkage.static_matrix2
-                    
+
                 Me1=npy.abs(npy.dot(P,static_matrix[:3,:]))>1e-10
                 Me2=npy.abs(npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:]))>1e-10
                 Me=npy.vstack([Me1,Me2])
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     M[ip*6:(ip+1)*6,ndof]+=Me[:,indof]
 
-                
+
                 Ke1=npy.dot(P,static_matrix[:3,:])
                 Ke2=npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:])
                 Ke=npy.vstack([Ke1,Ke2])
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     K[ip*6:(ip+1)*6,ndof]+=Ke[:,indof]
 
-                    
+
             # Unknowns loads contribution to the LHS
             try:
                 uloads=uloads_parts[part]
             except:
-                uloads=[]                
+                uloads=[]
             for load in uloads:
-                P=geometry.Euler2TransferMatrix(*load.euler_angles)            
+                P=geometry.Euler2TransferMatrix(*load.euler_angles)
                 u=load.position
                 uprime=u
                 L=geometry.CrossProductMatrix(uprime)
@@ -476,21 +519,21 @@ class Mechanism:
                 Me=npy.vstack([Me1,Me2])
                 for indof,ndof in enumerate(self.sdof[load]):
                     M[ip*6:(ip+1)*6,ndof]+=Me[:,indof]
-                
+
                 Ke1=npy.dot(P,load.static_matrix[:3,:])
                 Ke2=npy.dot(L,npy.dot(P,load.static_matrix[:3,:]))+npy.dot(P,load.static_matrix[3:,:])
                 Ke=npy.vstack([Ke1,Ke2])
                 for indof,ndof in enumerate(self.sdof[load]):
                     K[ip*6:(ip+1)*6,ndof]=Ke[:,indof]     # minus because of sum is in LHS
-                    
-                    
+
+
             # knowns loads contribution to the RHS
             try:
                 loads=loads_parts[part]
             except:
-                loads=[]                
+                loads=[]
             for load in loads:
-                P=geometry.Euler2TransferMatrix(*load.euler_angles)            
+                P=geometry.Euler2TransferMatrix(*load.euler_angles)
                 u=load.position
                 uprime=u
                 L=geometry.CrossProductMatrix(uprime)
@@ -498,11 +541,11 @@ class Mechanism:
                 F2=npy.dot(L,npy.dot(P,load.forces))+npy.dot(P,load.torques)
                 Fe=npy.hstack([F1.reshape(3),F2.reshape(3)])
                 F[ip*6:(ip+1)*6]-=Fe # minus because of sum is in LHS
-        
+
         neq=6*lparts
         neq_linear=neq
         indices_r=list(range(neq))
-        
+
         # behavior equations of linkages
         for linkage in self.linkages:
             neq_linkage=linkage.static_behavior_occurence_matrix.shape[0]
@@ -510,7 +553,7 @@ class Mechanism:
                 # Adding to occurence matrix
                 Me=npy.zeros((neq_linkage,self.n_sdof))
                 for indof,ndof in enumerate(self.sdof[linkage]):
-                    Me[:,ndof]+=linkage.static_behavior_occurence_matrix[:,indof]    
+                    Me[:,ndof]+=linkage.static_behavior_occurence_matrix[:,indof]
                 M=npy.vstack([M,Me])
 
                 # Adding linear equations to System matrix K
@@ -518,7 +561,7 @@ class Mechanism:
                 if neq_linear_linkage>0:
                     Ke=npy.zeros((neq_linear_linkage,self.n_sdof))
                     for indof,ndof in enumerate(self.sdof[linkage]):
-                        Ke[neq_linear:neq_linear+6,ndof]+=linkage.static_behavior_linear_eq[:,indof]   
+                        Ke[neq_linear:neq_linear+6,ndof]+=linkage.static_behavior_linear_eq[:,indof]
                     K=npy.vstack([K,Ke])
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_linkage))
 
@@ -545,12 +588,12 @@ class Mechanism:
 
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
-                        
+
                 # Updating counters
                 neq+=neq_linkage
                 neq_linear+=neq_linear_linkage
-                
-                
+
+
 
         # behavior equations of unknowns loads
         for load in self.unknown_static_loads:
@@ -559,7 +602,7 @@ class Mechanism:
                 # Adding to occurence matrix
                 Me=npy.zeros((neq_load,self.n_sdof))
                 for indof,ndof in enumerate(self.sdof[load]):
-                    Me[:,ndof]+=load.static_behavior_occurence_matrix[:,indof]    
+                    Me[:,ndof]+=load.static_behavior_occurence_matrix[:,indof]
                 M=npy.vstack([M,Me])
 
                 # Adding linear equations to System matrix K
@@ -567,7 +610,7 @@ class Mechanism:
                 if neq_linear_load>0:
                     Ke=npy.zeros((neq_linear_load,self.n_sdof))
                     for indof,ndof in enumerate(self.sdof[load]):
-                        Ke[neq_linear:neq_linear+6,ndof]+=load.static_behavior_linear_eq[:,indof]   
+                        Ke[neq_linear:neq_linear+6,ndof]+=load.static_behavior_linear_eq[:,indof]
                     K=npy.vstack([K,Ke])
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_load))
 
@@ -582,12 +625,12 @@ class Mechanism:
                     w,v=0,0
                 for i,fct in zip(load.static_behavior_nonlinear_eq_indices,load.static_behavior_nonlinear_eq):
                     nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
-                        
+
                 # Updating counters
                 neq+=neq_load
                 neq_linear+=neq_linear_load
 
-        
+
         solvable,solvable_var,resolution_order=tools.EquationsSystemAnalysis(M,None)
 #        print(resolution_order)
         if not solvable:
@@ -601,7 +644,7 @@ class Mechanism:
                     nonlinear_eq[eq]
                     linear=False
                 except KeyError:
-                    linear_eqs.append(eq)            
+                    linear_eqs.append(eq)
             if linear:
                 eqs_r=npy.array([indices_r[eq] for eq in eqs])
                 other_vars=npy.array([i for i in range(self.n_sdof) if i not in variables])
@@ -616,7 +659,7 @@ class Mechanism:
                     try:
                         f1=nonlinear_eq[eq]
                         vars_func=[i for i in range(self.n_sdof) if M[eq,i]]
-                        def f2(x,f1=f1,vars_func=vars_func,variables=variables,q=q):                    
+                        def f2(x,f1=f1,vars_func=vars_func,variables=variables,q=q):
                             x2=[]
                             for variable in vars_func:
                                 try:
@@ -642,18 +685,18 @@ class Mechanism:
             for idof,dof in enumerate(dofs):
                 rlink[idof]=q[dof]
             results[link]=rlink
-            
-        return results        
-        
+
+        return results
+
     def _KinematicAnalysis(self):
         # Kinematic setting
-        self.n_kdof=0
-        self.kdof={}        
-        loops=nx.cycle_basis(self.holonomic_graph)
-        ll=len(loops)
-        ieq=6*ll
-        neq=ieq+len(self.imposed_speeds)
-        nhl=[]
+        self.n_kdof = 0
+        self.kdof = {}
+        loops = nx.cycle_basis(self.holonomic_graph)
+        ll = len(loops)
+        ieq = 6*ll
+        neq = ieq+len(self.imposed_speeds)
+        nhl = []
         for linkage in self.linkages:
             try:
                 # Holonomic linkage
@@ -662,33 +705,34 @@ class Mechanism:
                     try:
                         self.kdof[linkage].append(self.n_kdof+dofl)
                     except KeyError:
-                        self.kdof[linkage]=[self.n_kdof+dofl]                        
+                        self.kdof[linkage]=[self.n_kdof+dofl]
                 self.n_kdof+=ndofl
             except AttributeError:
                 # Non holonomic linkage
                 nhl.append(linkage)
                 neq+=len(linkage.kinematic_directions)
-                        
-        K=npy.zeros((neq,self.n_kdof))
-        F=npy.zeros((neq,1))
-        q=npy.zeros((self.n_kdof,1))
-        M=npy.zeros((neq,self.n_kdof))
+
+        K = npy.zeros((neq,self.n_kdof))
+        F = npy.zeros((neq,1))
+        q = npy.zeros((self.n_kdof,1))
+        M = npy.zeros((neq,self.n_kdof))
+
         for il,loop in enumerate(loops):
             for ilk,linkage in enumerate(loop):
-                if not linkage.__class__.__name__=='Part':
+                if not linkage.__class__.__name__ == 'Part':
                     try:
-                        if loop[ilk+1]==linkage.part2:
-                            side=1                            
+                        if loop[ilk+1] == linkage.part2:
+                            side = 1
                         else:
-                            side=-1
+                            side =- 1
                     except IndexError:
                         # linkage is last element of list
-                        if loop[ilk-1]==linkage.part1:
-                            side=1     
+                        if loop[ilk-1] == linkage.part1:
+                            side = 1
                         else:
-                            side=-1
+                            side =- 1
                     # Linkage
-                    P=geometry.Euler2TransferMatrix(*linkage.euler_angles)            
+                    P=geometry.Euler2TransferMatrix(*linkage.euler_angles)
                     u=linkage.position
                     uprime=u
                     L=geometry.CrossProductMatrix(uprime)
@@ -696,86 +740,89 @@ class Mechanism:
                     Me2=npy.abs(npy.dot(L,npy.dot(P,linkage.kinematic_matrix[:3,:]))+npy.dot(P,linkage.kinematic_matrix[3:,:]))>1e-10
                     Me=npy.vstack([Me1,Me2])
                     for indof,ndof in enumerate(self.kdof[linkage]):
-                        M[6*il:6*il+6,ndof]+=Me[:,indof]
-                    
+                        M[6*il:6*il+6,ndof] += Me[:,indof]
+
 
                     Ke1=npy.dot(P,linkage.kinematic_matrix[:3,:])
                     Ke2=npy.dot(L,npy.dot(P,linkage.kinematic_matrix[:3,:]))+npy.dot(P,linkage.kinematic_matrix[3:,:])
                     Ke=side*npy.vstack([Ke1,Ke2])
                     for indof,ndof in enumerate(self.kdof[linkage]):
                         K[6*il:6*il+6,ndof]+=Ke[:,indof]
-        
+
         # Non holonomic equations
         for linkage in nhl:
             # Speed computation
             try:
-                path=nx.shortest_path(self.holonomic_graph,linkage.part1,linkage.part2)
+                path = nx.shortest_path(self.holonomic_graph,
+                                        linkage.part1,
+                                        linkage.part2)
             except nx.NetworkXNoPath:
                 raise ModelError('No path between {} and {} for linkage {} of type {}'.format(linkage.part1.name, linkage.part2.name, linkage.name, linkage.__class__.__name__))
-            V=npy.zeros((3,self.n_kdof))
+
+            V = npy.zeros((3, self.n_kdof))
             for il, linkage2 in enumerate(path):
-                if not linkage2.__class__.__name__=='Part':
+                if not linkage2.__class__.__name__ == 'Part':
                     try:
-                        if path[il+1]==linkage2.part2:
-                            side=1                            
+                        if path[il+1] == linkage2.part2:
+                            side = 1
                         else:
-                            side=-1
+                            side = -1
                     except IndexError:
                         # linkage is last element of list
-                        if path[il-1]==linkage2.part1:
-                            side=1     
+                        if path[il-1] == linkage2.part1:
+                            side = 1
                         else:
-                            side=-1
+                            side = -1
                     # It's really a linkage
-                    P=geometry.Euler2TransferMatrix(*linkage2.euler_angles)            
-                    u=linkage2.position
-                    uprime=u-linkage.position
-                    L=geometry.CrossProductMatrix(uprime)
-                    Ve=npy.dot(L,npy.dot(P,linkage2.kinematic_matrix[:3,:]))+npy.dot(P,linkage2.kinematic_matrix[3:,:])
-                    for indof,ndof in enumerate(self.kdof[linkage2]):
-                        V[:,ndof]+=side*Ve[:,indof]
-                        
-                    
-            P=geometry.Euler2TransferMatrix(*linkage.euler_angles)            
+                    P = geometry.Euler2TransferMatrix(*linkage2.euler_angles)
+                    u = linkage2.position
+                    uprime = u-linkage.position
+                    L = geometry.CrossProductMatrix(uprime)
+                    Ve = npy.dot(L,npy.dot(P,linkage2.kinematic_matrix[:3,:]))+npy.dot(P,linkage2.kinematic_matrix[3:,:])
+                    for indof, ndof in enumerate(self.kdof[linkage2]):
+                        V[:,ndof] += side*Ve[:,indof]
+
+
+            P = geometry.Euler2TransferMatrix(*linkage.euler_angles)
             for direction in linkage.kinematic_directions:
-                K[ieq,:]=npy.dot(npy.dot(P,direction),V)
+                K[ieq,:] = npy.dot(npy.dot(P, direction), V)
                 ieq+=1
-        
+
         # Imposed speeds equations
         for linkage,index,speed in self.imposed_speeds:
-            K[ieq,self.kdof[linkage][index]]=1
-            F[ieq,0]=speed
-            ieq+=1
-        
+            K[ieq, self.kdof[linkage][index]] = 1
+            F[ieq, 0] = speed
+            ieq += 1
+
         # deducing M from K for last lines
-        M[6*ll:,:]=npy.abs(K[6*ll:,:])>1e-10
-        
-        solvable,solvable_var,resolution_order=tools.EquationsSystemAnalysis(M,None)
+        M[6*ll:, :] = npy.abs(K[6*ll:, :]) > 1e-10
+
+        solvable, solvable_var, resolution_order = tools.EquationsSystemAnalysis(M, None)
 
         if solvable:
             for eqs,variables in resolution_order:
-                eqs=npy.array(eqs)
-                other_vars=npy.array([i for i in range(self.n_kdof) if i not in variables])
-                Kr=K[eqs[:,None],npy.array(variables)]
-                Fr=F[eqs,:]-npy.dot(K[eqs[:,None],other_vars],q[other_vars,:])
-                q[variables,:]=linalg.solve(Kr,Fr)
-            results={}
-            for link,dofs in self.kdof.items():
-                rlink={}
-                for idof,dof in enumerate(dofs):
-                    rlink[idof]=q[dof,0]
-                results[link]=rlink
-            return results,q
+                eqs = npy.array(eqs)
+                other_vars = npy.array([i for i in range(self.n_kdof) if i not in variables])
+                Kr = K[eqs[:,None],npy.array(variables)]
+                Fr = F[eqs,:]-npy.dot(K[eqs[:,None], other_vars], q[other_vars, :])
+                q[variables, :] = linalg.solve(Kr,Fr)
+            results = {}
+            for link, dofs in self.kdof.items():
+                rlink = {}
+                for idof, dof in enumerate(dofs):
+                    rlink[idof] = q[dof, 0]
+                results[link] = rlink
+            return results, q
         else:
             raise ModelError
-    
+
     def GlobalSankey(self):
         from matplotlib.sankey import Sankey
         flows=[]
         orientations=[]
         labels=[]
-        
-        
+
+
         for load in self.known_static_loads+self.unknown_static_loads:
             pl=self.LoadPower(load)
             print(pl)
@@ -785,7 +832,7 @@ class Mechanism:
                 orientations.append(0)
             else:
                 orientations.append(-1)
-                
+
         for linkage in self.linkages:
             pl=self.LinkagePowerLosses(linkage)
 #            print(pl)
@@ -794,25 +841,24 @@ class Mechanism:
                 orientations.append(-1)
                 labels.append(linkage.name)
 #            pl.append(0.5*l)
-        l=max([abs(f) for f in flows])
+        l = max([abs(f) for f in flows])
 #        pl=[0.1*l]*len(flows)
 
         sankey = Sankey(unit='W',scale=1/l)
-    
+
         sankey.add(flows=flows,
            orientations=orientations,labels=labels,)
-        
+
         sankey.finish()
-        
-    def VMPlot(self,u=1):
-        import volmdlr as vm
+
+    def VMPlot(self, u=1):
         points=[]
         for linkage in self.linkages:
             points.append(vm.Point3D(linkage.position))
             points.append(vm.Line3D(vm.Point3D(linkage.position),vm.Point3D(linkage.position+u*linkage.P[:,0])))
         mdl=vm.VolumeModel(points)
         mdl.MPLPlot()
-        
+
     def SceneCaracteristics(self):
         min_vect=self.linkages[0].position.copy()
         max_vect=self.linkages[0].position.copy()
@@ -831,23 +877,23 @@ class Mechanism:
 #            print(linkage,linkage.position)
             center+=linkage.position
             n+=1
-        
+
         center=center/n
 #        print(min_vect,max_vect)
         max_length=linalg.norm(min_vect-max_vect)
 #        print(center,max_length)
         return center,max_length
-    
-            
+
+
     def BabylonScript(self,forces=True):
 
         env = Environment(loader=PackageLoader('genmechanics', 'templates'),
                           autoescape=select_autoescape(['html', 'xml']))
-        
+
         template = env.get_template('babylon.html')
-        
+
         center,length=self.SceneCaracteristics()
-        
+
         if forces:
             max_force=0.
             max_torque=0
@@ -856,16 +902,16 @@ class Mechanism:
                 t=self.GlobalLinkageForces(linkage,0)[3:]
                 max_force=max(max_force,max(f))
                 max_torque=max(max_torque,max(t))
-            
+
             for load in self.known_static_loads+self.unknown_static_loads:
                 f=self.GlobalLoadForces(load)[0:3]
                 t=self.GlobalLoadForces(load)[3:]
                 max_force=max(max_force,max(f))
                 max_torque=max(max_torque,max(t))
-                
+
             print(max_force,max_torque)
-        
-                
+
+
         linkages_strings=[]
         for linkage in self.linkages:
             try:
@@ -880,21 +926,21 @@ class Mechanism:
             except AttributeError:
                 print('error')
                 pass
-        
-        
-            
-            
+
+
+
+
         return template.render(name=self.name,center=tuple(center),length=length,
                                linkages_strings=linkages_strings)
-    
+
     def BabylonShow(self,page='gm_babylonjs',forces=True):
         page+='.html'
 #        print(self.BabylonScript())
         with open(page,'w') as file:
             file.write(self.BabylonScript())
-        
+
         webbrowser.open('file://' + os.path.realpath(page))
-    
+
 #    def BabylonJS(self):
 #        center,length=self.SceneCaracteristics()
 #        s="""
@@ -936,8 +982,8 @@ class Mechanism:
 #         // This creates and positions a free camera
 #         //var plane = BABYLON.Mesh.CreatePlane("plane", 10.0, scene);
 #         """
-#         
-#         
+#
+#
 ##        s+='var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3({}, {}, {}), scene);'.format(*center)
 #        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., {}, new BABYLON.Vector3({}, {}, {}), scene);\n'.format(4*length,*center)
 ##        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., 15, new BABYLON.Vector3(0,0,0), scene);'
@@ -951,7 +997,7 @@ class Mechanism:
 #         // Dim the light a small amount
 #         light.intensity = .5;
 #         """
-#         
+#
 ##         // Let's try our built-in 'sphere' shape. Params: name, subdivisions, size, scene
 ##         var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
 ##         // Move the sphere upward 1/2 its height
@@ -961,7 +1007,7 @@ class Mechanism:
 #
 #        for linkage in self.linkages:
 #            s+='var sphere = BABYLON.Mesh.CreateSphere("sphere1", 15., {}, scene);\n'.format(length/30)
-#            s+="sphere.position=new BABYLON.Vector3({},{},{});\n".format(*linkage.position)    
+#            s+="sphere.position=new BABYLON.Vector3({},{},{});\n".format(*linkage.position)
 ##            s+="var lines = BABYLON.Mesh.CreateLines("lines", [    new BABYLON.Vector3(-10, 0, 0)"
 #        s+="""
 #         // Leave this function
@@ -985,6 +1031,6 @@ class Mechanism:
 #        """
 #        with open('gm_babylonjs.html','w') as file:
 #            file.write(s)
-#        
+#
 #        webbrowser.open('file://' + os.path.realpath('gm_babylonjs.html'))
-        
+
