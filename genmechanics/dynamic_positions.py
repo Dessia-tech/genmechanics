@@ -46,7 +46,7 @@ class Linkage(DessiaObject):
                               basis=basis,
                               number_kinematic_parameters=number_kinematic_parameters,
                               name=name)
-        
+
 
 class RevoluteLinkage(Linkage):
     holonomic = True
@@ -99,7 +99,7 @@ class PrismaticLinkage(Linkage):
                          part2, lambda q: part2_position,
                          True,
                          basis, 1, name)
-        
+
 class BallLinkage(Linkage):
     holonomic = True
 
@@ -123,8 +123,8 @@ class BallLinkage(Linkage):
 #class PartWireFrame(Part):
 #    def __init__(self, part):
 #        Part.__init__(self, name=part.name, interest_points=part.interest_points)
-        
-        
+
+
 
 class MovingMechanism(Mechanism):
     def __init__(self, linkages, ground, name):
@@ -164,7 +164,7 @@ class MovingMechanism(Mechanism):
 #            print(linkage_to_delete)
             self.opened_linkages.append(linkage_to_delete)
             graph.remove_node(linkage_to_delete)
-        
+
         self.linkages_kinematic_setting = [l for l in self.linkages if l not in self.opened_linkages]
         self.settings_graph = graph
 
@@ -253,7 +253,7 @@ class MovingMechanism(Mechanism):
 #                                         for i in range(linkage.number_kinematic_parameters)]
             linkage_parameters_values = self.extract_linkage_parameters_values(linkage, kinematic_parameters_values)
 #            print('lpv', linkage_parameters_values)
-            
+
             if linkage_side:
                 linkage_basis = linkage.basis(linkage_parameters_values)
                 origin = (linkage.part1_position(linkage_parameters_values) \
@@ -269,7 +269,7 @@ class MovingMechanism(Mechanism):
                                        linkage_basis.v,
                                        linkage_basis.w,
                                        )
-                
+
 
 #                origin = linkage.part2_position(linkage_parameters_values) - linkage.part1_position(linkage_parameters_values)
 #                linkage_frame = vm.Frame3D(origin,
@@ -277,18 +277,18 @@ class MovingMechanism(Mechanism):
 #                                           linkage_basis.v,
 #                                           linkage_basis.w,
 #                                           )
-                
+
 #            print('linkage_frame', linkage_frame)
 #            print('frame', frame)
 #            frame += linkage_frame
             frame = frame + linkage_frame
 #            print('frame after', frame)
-            
-                
+
+
         return frame
 
     def extract_linkage_parameters_values(self, linkage, global_parameter_values):
-        
+
         linkage_parameters = [global_parameter_values[self.kinematic_parameters_mapping[linkage, i]]\
                for i in range(linkage.number_kinematic_parameters)]
         return linkage_parameters
@@ -304,7 +304,7 @@ class MovingMechanism(Mechanism):
 
     def opened_linkage_misalignment(self, linkage, global_parameter_values):
         ql = self.extract_linkage_parameters_values(linkage, global_parameter_values)
-        
+
         basis1 = self.part_frame(linkage.part1, global_parameter_values).Basis()
         basis2 = self.part_frame(linkage.part2, global_parameter_values).Basis()
         basis = basis2 - basis1 - linkage.basis(ql)# !!!!!
@@ -319,23 +319,23 @@ class MovingMechanism(Mechanism):
 #            residue += (misalignment_basis.u - vm.x3D).Norm()
 #            residue += (misalignment_basis.v - vm.y3D).Norm()
 #            residue += (misalignment_basis.w - vm.z3D).Norm()
-            
+
 #        print(residue)
 #            print(misalignment_basis.u.Norm()+misalignment_basis.v.Norm()+misalignment_basis.w.Norm())
-            
+
         return residue
 
     def solve_configurations(self, imposed_parameters):
 
         n_parameters = len(self.kinematic_parameters_mapping.items())
         n_steps = len(list(imposed_parameters.values())[0])
-                
-                
+
+
         def geometric_closing_residue(qr):
-            q = basis_vector[:]            
+            q = basis_vector[:]
             for qrv, i in zip(qr, free_parameters):
                 q[i] = qrv
-                
+
             return self.opened_linkages_residue(q)
 
         # Free parameter identification
@@ -348,21 +348,21 @@ class MovingMechanism(Mechanism):
         qs = []
 #        x0 = zeros(len(free_parameters))
         x0 = npy.random.random(len(free_parameters))
-        
+
         for istep in range(n_steps):
-    
+
             basis_vector = [0] * n_parameters
             for i in range(n_parameters):
                 if i in imposed_parameters:
                     basis_vector[i] = imposed_parameters[i][istep]
-            
-    
+
+
             result = minimize(geometric_closing_residue, x0)
             if result.fun < 1e-5:
                 x0 = result.x
                 q = basis_vector[:]
                 for qrv, i in zip(result.x, free_parameters):
-                    q[i] = qrv                    
+                    q[i] = qrv
                 qs.append(q)
             else:
                 print('@istep {}: residue: {}'.format(istep, result.fun))
@@ -372,16 +372,16 @@ class MovingMechanism(Mechanism):
 
 
 class MechanismConfigurations(DessiaObject):
-    
+
     def __init__(self, mechanism, steps):
-        
+
         DessiaObject.__init__(self,
                               mechanism=mechanism,
                               steps=steps)
-        
+
     def opened_linkages_residue(self):
         return self.mechanism.opened_linkages_residue(self.kinematic_parameters_values)
-        
+
     def plot_kinematic_parameters(self,
                                   linkage1, kinematic_parameter1,
                                   linkage2, kinematic_parameter2
@@ -399,16 +399,16 @@ class MechanismConfigurations(DessiaObject):
         ax.set_ylabel('Parameter {} of linkage {}'.format(kinematic_parameter2+1, linkage2.name))
         ax.grid()
         return fig, ax
-        
+
     def trajectory(self, point, part, reference_part):
         trajectory = []
         for step in self.steps:
             frame1 = self.mechanism.part_frame(part, step)
             frame2 = self.mechanism.part_frame(reference_part, step)
-            frame = frame2 - frame1
+            frame = frame1 - frame2
             trajectory.append(frame.OldCoordinates(point))
         return trajectory
-    
+
     def plot2D_trajectory(self, point, part, reference_part, x=vm.x3D, y=vm.y3D):
         xt = []
         yt = []
@@ -416,20 +416,20 @@ class MechanismConfigurations(DessiaObject):
             xp, yp = point.PlaneProjection2D(x, y)
             xt.append(xp)
             yt.append(yp)
-        
+
         fig, ax = plt.subplots()
         ax.plot(xt, yt, marker='o')
         ax.grid()
         ax.set_xlabel(str(x))
         ax.set_ylabel(str(y))
         ax.set_title('Trajectory of point {} on part {} relatively to part {}'.format(str(point), part.name, reference_part.name))
-        
+
         return fig, ax
-    
+
     def plot_trajectory(self, point, part, reference_part):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        
+
         xt = []
         yt = []
         zt = []
@@ -438,7 +438,7 @@ class MechanismConfigurations(DessiaObject):
             xt.append(xp)
             yt.append(yp)
             zt.append(zp)
-            
+
 #        fig, ax = plt.subplots()
         ax.plot(xt, yt, zt, marker='o')
         ax.set_xlabel('X')
@@ -449,70 +449,86 @@ class MechanismConfigurations(DessiaObject):
 #        ax.set_aspect('equal')
 #        fig.canvas.set_window_title('Trajectory')
         return fig, ax
-    
+
     def plot2D(self, x=vm.x3D, y=vm.y3D, isteps=None, plot_frames=False):
         fig, ax = plt.subplots()
-        
+
         # Linkage colors
         np = len(self.mechanism.parts)
         colors = {p: hsv_to_rgb((ip / np, 0.78, 0.87)) for ip, p in enumerate(self.mechanism.parts)}
         colors[self.mechanism.ground] = (0,0,0)
-        
+
 #            i: to_hex(
 #                ) for i in range(nlines)}
-        
-        if isteps == None:            
+
+        if isteps == None:
             steps = self.steps[:]
         else:
             steps = [self.steps[i] for i in isteps]
-        
+
+#        # Fetching wireframes lines
+#        wireframes = {}
+#        for part in self.mechanism.parts:
+#            # Fetching local points
+#            part_points = []
+#            for linkage in self.mechanism.part_linkages:
+
+
         for istep, step in enumerate(steps):
             linkage_positions = {}
             for linkage in self.mechanism.linkages:
-                
+
     #            flp1.origin.PlaneProjection2D(x, y).MPLPlot(ax=ax)
                 if linkage.positions_require_kinematic_parameters:
                     ql = self.mechanism.extract_linkage_parameters_values(linkage,
                                                                           step)
                 else:
                     ql = []
-                
+
                 part1_frame = self.mechanism.part_frame(linkage.part1,
                                                         step)
-    #           
-                linkage_position1 = part1_frame.OldCoordinates(linkage.part1_position(ql)).PlaneProjection2D(x, y)
-                
+    #
+                linkage_position1 = part1_frame.OldCoordinates(linkage.part1_position(ql))
+                linkage_position1_2D = linkage_position1.PlaneProjection2D(x, y)
+
                 part2_frame = self.mechanism.part_frame(linkage.part2,
                                                         step)
-    #           
-                linkage_position2 = part2_frame.OldCoordinates(linkage.part2_position(ql)).PlaneProjection2D(x, y)
-                
-    
+    #
+                linkage_position2 = part2_frame.OldCoordinates(linkage.part2_position(ql))
+                linkage_position2_2D = linkage_position1.PlaneProjection2D(x, y)
+
                 if linkage_position1 != linkage_position2:
-                    ax.text(*linkage_position1, linkage.name+' position1')
-                    ax.text(*linkage_position2, linkage.name+' position2')
-                    error = linkage_position2 - linkage_position1
-                    ax.add_patch(Arrow(*linkage_position1,
+                    ax.text(*linkage_position1_2D, linkage.name+' position1')
+                    ax.text(*linkage_position2_2D, linkage.name+' position2')
+                    error = linkage_position2_2D - linkage_position1_2D
+                    ax.add_patch(Arrow(*linkage_position1_2D,
                                        *error, 0.05))
                 else:
                     if istep == 0:
-                        ax.text(*linkage_position1, linkage.name)
-    
+                        ax.text(*linkage_position1_2D, linkage.name)
+
                 linkage_positions[linkage, linkage.part1] = linkage_position1
                 linkage_positions[linkage, linkage.part2] = linkage_position2
-                    
-    
+
+
             part_linkages = self.mechanism.part_linkages()
             del part_linkages[self.mechanism.ground]
-            
+
             for ipart, (part, linkages) in enumerate(part_linkages.items()):
-                middle_point = vm.o2D
+#                middle_point = vm.o2D
+#                for linkage in linkages:
+#                    middle_point += linkage_positions[linkage, part]
+#                for point in part.interest_points:
+#                    middle_point += point
+#                middle_point /= (len(linkages) + len(part.interest_points))
+#                xm, ym = middle_point.vector
+                points = []
                 for linkage in linkages:
-                    middle_point += linkage_positions[linkage, part]
-                for point in part.interest_points:
-                    middle_point += point
-                middle_point /= (len(linkages) + len(part.interest_points))
-                xm, ym = middle_point.vector
+                    points.append(linkage_positions[linkage, part])
+                points.extend(part.interest_points)
+#                print(points)
+                xm, ym, _ = vm.Point3D.mean_point(points).vector
+
                 if istep == 0:
                     ax.text(xm, ym, part.name + ' step 0',
                             ha="center", va="center",
@@ -528,28 +544,32 @@ class MechanismConfigurations(DessiaObject):
                                       ec=colors[part],
                                       fc=(1., 1, 1),
                                       ))
-                    
-                for linkage in linkages:
-                    x1, y1 = linkage_positions[linkage, part]
-                    ax.plot([x1, xm], [y1, ym], color=colors[part])
-                    
-                    
+
+#                for linkage in linkages:
+#                    x1, y1 = linkage_positions[linkage, part]
+#                    ax.plot([x1, xm], [y1, ym], color=colors[part])
+
+                for line in Part.wireframe_lines(points):
+                    line.MPLPlot2D(x, y, ax, color=colors[part])
+
                 part_frame = self.mechanism.part_frame(part, step)
                 for point in part.interest_points:
                     x1, y1 = part_frame.OldCoordinates(point).PlaneProjection2D(x, y)
                     ax.plot([x1, xm], [y1, ym], color=colors[part])
-                    
-                    
+
+
                 if plot_frames:
                     part_frame = self.mechanism.part_frame(part, step)
                     part_frame.plot2d(x=x, y=y, ax=ax)
-                
+             
+
+
         ax.set_aspect('equal')
         ax.set_xlabel(str(x))
         ax.set_ylabel(str(y))
         ax.margins(.1)
-                
-    def babylonjs(self,page='gm_babylonjs',forces=True):
+
+    def babylonjs(self, page='gm_babylonjs', plot_frames=False, plot_trajectories=False):
         page+='.html'
 
         env = Environment(loader=PackageLoader('genmechanics', 'templates'),
@@ -562,19 +582,19 @@ class MechanismConfigurations(DessiaObject):
 
         part_points = {p: [] for p in self.mechanism.parts}
         part_points[self.mechanism.ground] = []
-#        linkage_positions = {}
+#        part_frames = {}
 
         for part, linkages in self.mechanism.part_linkages().items():
 #            part_frame = self.mechanism.part_frame(part,
-#                                                   self.steps[0]) 
+#                                                   self.steps[0])
             for linkage in linkages:
                 if linkage.positions_require_kinematic_parameters:
                     ql = self.mechanism.extract_linkage_parameters_values(linkage,
                                                                           self.steps[0])
                 else:
                     ql = []
-                
-                
+
+
                 if part == linkage.part1:
                     linkage_position = linkage.part1_position(ql)
                 else:
@@ -585,51 +605,61 @@ class MechanismConfigurations(DessiaObject):
             for point in part.interest_points:
                 part_points[part].append(point)
 
-        
+
         meshes_string = 'var parts = [];\n'
 
         for part in self.mechanism.parts:
             meshes_string += 'var part_meshes = [];\n'
-            for l in part.wireframe_lines(part_points[part]):    
+            for l in part.wireframe_lines(part_points[part]):
                 meshes_string += l.Babylon(color=colors[part])
                 meshes_string += 'part_meshes.push(line);\n'
+
+
+            if plot_frames:
+                meshes_string += vm.oxyz.babylonjs()
+                meshes_string += 'part_meshes.push(line1);\n'
+                meshes_string += 'part_meshes.push(line2);\n'
+                meshes_string += 'part_meshes.push(line3);\n'
+
             meshes_string += 'parts.push(part_meshes);\n'
-         
+            
+            
             
         # Computing positions and orientations
         positions = []
         orientations = []
+#        frame_babylon = vm.Frame3D(vm.o3D, vm.x3D, vm.z3D, vm.y3D)
         for step in self.steps:
             step_positions = []
             step_orientations = []
             for part in self.mechanism.parts:
-                
-                frame = -self.mechanism.part_frame(part,
-                                                  step) 
+
+                frame = round(self.mechanism.part_frame(part,
+                                                  step))
+
                 step_positions.append(list(frame.origin))
-                step_orientations.append([list(frame.OldCoordinates(vm.x3D)),
-                                          list(frame.OldCoordinates(vm.y3D)),
-                                          list(frame.OldCoordinates(vm.z3D))])
-                
-                print(self.steps.index(step), part.name)
-                print(frame)
-                print('\n\n')
-                
+                step_orientations.append([list(frame.u),
+                                          list(frame.v),
+                                          list(frame.w)])
+
+
             positions.append(step_positions)
             orientations.append(step_orientations)
-#            print(positions)
-#        
-#            print('\n')
-#            print(orientations)
+            
+        trajectories = []
+        if plot_trajectories:
+            for part in self.mechanism.parts:
+                for point in part.interest_points:
+                    trajectories.append([list(p.vector) for p in self.trajectory(point, part, self.mechanism.ground)])
+
         script = template.render(center=(0, 0, 0),
                                  length=2*0.5,
                                  meshes_string=meshes_string,
                                  positions=positions,
-                                 orientations=orientations)
+                                 orientations=orientations,
+                                 trajectories=trajectories)
 
-#        print(script)
         with open(page,'w') as file:
             file.write(script)
 
         webbrowser.open('file://' + os.path.realpath(page))
-

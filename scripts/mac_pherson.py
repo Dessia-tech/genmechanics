@@ -53,4 +53,4 @@ configuration.plot2D_trajectory(hub.interest_points[0], hub, car_body)
 configuration.plot_trajectory(hub.interest_points[0], hub, car_body)
 configuration.plot_trajectory(hub.interest_points[1], hub, car_body)
 
-configuration.babylonjs()
+configuration.babylonjs(plot_frames=False, plot_trajectories=True)

@@ -36,6 +36,7 @@
 var createScene = function () {
     // This creates a basic Babylon Scene object (non-mesh)
         var scene = new BABYLON.Scene(engine);
+        scene.useRightHandedSystem = true;
 	var cam = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0, 0, 2*{{length}}, new BABYLON.Vector3{{center}}, scene);
 	cam.wheelPrecision=50./{{length}}
 	cam.pinchPrecision=50./{{length}}
@@ -44,7 +45,26 @@ var createScene = function () {
 	cam.attachControl(canvas);
 	cam.inertia = 0;
 	cam.panningInertia = 0;
+  cam.upVector = new BABYLON.Vector3(0, 0, 1);
 	// cam.mode = BABYLON.Camera.ORTHOGRAPHIC_CAMERA;
+
+  var red_material = new BABYLON.StandardMaterial("red_material", scene);
+  red_material.diffuseColor = new BABYLON.Color3(0.8, 0, 0);
+  red_material.specularColor = new BABYLON.Color3(0.5, 0.6, 0.87);
+  red_material.emissiveColor = new BABYLON.Color3(0.8, 0, 0);
+  red_material.ambientColor = new BABYLON.Color3(0.23, 0.98, 0.53);
+
+  var green_material = new BABYLON.StandardMaterial("red_material", scene);
+  green_material.diffuseColor = new BABYLON.Color3(0, 0.8, 0);
+  green_material.specularColor = new BABYLON.Color3(0.5, 0.6, 0.87);
+  green_material.emissiveColor = new BABYLON.Color3(0, 0.8, 0);
+  green_material.ambientColor = new BABYLON.Color3(0.23, 0.98, 0.53);
+
+  var blue_material = new BABYLON.StandardMaterial("red_material", scene);
+  blue_material.diffuseColor = new BABYLON.Color3(0, 0, 0.8);
+  blue_material.specularColor = new BABYLON.Color3(0.5, 0.6, 0.87);
+  blue_material.emissiveColor = new BABYLON.Color3(0, 0, 0.8);
+  blue_material.ambientColor = new BABYLON.Color3(0.23, 0.98, 0.53);
 
 
 	var light1 = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(-1, -1, -1), scene);
@@ -86,20 +106,22 @@ var createScene = function () {
         xChar.position = new BABYLON.Vector3(0.9 * size, -0.05 * size, 0);
 
         var axisY = BABYLON.Mesh.CreateLines("axisY", [
-            new BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, 0, size), new BABYLON.Vector3(0, -0.05 * size, size * 0.95),
-            new BABYLON.Vector3(0, 0, size), new BABYLON.Vector3(0, 0.05 * size, size * 0.95)
-        ], scene);
-        axisY.color = new BABYLON.Color3(0, 1, 0);
-        var yChar = makeTextPlane("Y", "green", size / 10);
-        yChar.position = new BABYLON.Vector3(0, 0.05 * size, 0.9 * size);
-
-        var axisZ = BABYLON.Mesh.CreateLines("axisZ", [
             new BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, size, 0), new BABYLON.Vector3(-0.05 * size, size * 0.95, 0),
             new BABYLON.Vector3(0, size, 0), new BABYLON.Vector3(0.05 * size, size * 0.95, 0)
         ], scene);
+        axisY.color = new BABYLON.Color3(0, 1, 0);
+        var yChar = makeTextPlane("Y", "green", size / 10);
+        yChar.position = new BABYLON.Vector3(0, 0.9 * size, -0.05 * size);
+
+
+        var axisZ = BABYLON.Mesh.CreateLines("axisZ", [
+            new BABYLON.Vector3.Zero(), new BABYLON.Vector3(0, 0, size), new BABYLON.Vector3(0, -0.05 * size, size * 0.95),
+            new BABYLON.Vector3(0, 0, size), new BABYLON.Vector3(0, 0.05 * size, size * 0.95)
+        ], scene);
         axisZ.color = new BABYLON.Color3(0, 0, 1);
         var zChar = makeTextPlane("Z", "blue", size / 10);
-        zChar.position = new BABYLON.Vector3(0, 0.9 * size, -0.05 * size);
+        zChar.position = new BABYLON.Vector3(0, 0.05 * size, 0.9 * size);
+
     };
 
     showAxis(1);
@@ -110,24 +132,38 @@ var createScene = function () {
   var positions = {{positions}};
   var orientations = {{orientations}};
 
+  var trajectories = {{trajectories}};
+  for (let trajectory of trajectories){
+    var points = [];
+    for(let point_vm of trajectory){
+      points.push(new BABYLON.Vector3(point_vm[0], point_vm[1], point_vm[2]));
+    }
+    var traj = BABYLON.Mesh.CreateLines("traj", points, scene);
+  }
+
+
   var n_parts = parts.length;
   var n_steps = positions.length
   var istep = 0;
-  console.log(parts[0].position);
-  console.log(parts[0].rotation);
   scene.registerBeforeRender(function () {
-          for(let ipart=0; ipart<n_parts; ipart++){
-              for(let mesh of parts[ipart]){
-                mesh.position = new BABYLON.Vector3(positions[istep][ipart][0], positions[istep][ipart][2], positions[istep][ipart][1]);
-                mesh.rotation = BABYLON.Vector3.RotationFromAxis(new BABYLON.Vector3(orientations[istep][ipart][0][0], orientations[istep][ipart][0][1], orientations[istep][ipart][0][2]),
-                                                                 new BABYLON.Vector3(orientations[istep][ipart][2][0], orientations[istep][ipart][2][1], orientations[istep][ipart][2][2]),
-                                                                 new BABYLON.Vector3(orientations[istep][ipart][1][0], orientations[istep][ipart][1][1], orientations[istep][ipart][1][2]));
-                // console.log(orientations[istep][ipart]);
-                // console.log(mesh.rotation, ipart);
+          if (istep % 10 == 0){
+
+            for(let ipart=0; ipart<n_parts; ipart++){
+                for(let mesh of parts[ipart]){
+                  mesh.position = new BABYLON.Vector3(positions[istep/10][ipart][0], positions[istep/10][ipart][1], positions[istep/10][ipart][2]);
+                  mesh.rotation = BABYLON.Vector3.RotationFromAxis(new BABYLON.Vector3(orientations[istep/10][ipart][0][0], orientations[istep/10][ipart][0][1], orientations[istep/10][ipart][0][2]),
+                                                                   new BABYLON.Vector3(orientations[istep/10][ipart][1][0], orientations[istep/10][ipart][1][1], orientations[istep/10][ipart][1][2]),
+                                                                   new BABYLON.Vector3(orientations[istep/10][ipart][2][0], orientations[istep/10][ipart][2][1], orientations[istep/10][ipart][2][2]));
+                  // mesh.rotation = new BABYLON.Vector3(-rotations['x'], -rotations['z'], rotations['y']);
+
+
+                  // console.log(istep, ipart, orientations[istep/10][ipart][0], orientations[istep/10][ipart][1], orientations[istep/10][ipart][2]);
+                  // console.log(mesh.rotation, ipart);
+              }
             }
           }
           istep++;
-          istep = istep % n_steps;
+          istep = istep % (n_steps*10);
           // console.log(istep, n_steps, n_parts);
   });
 

@@ -10,14 +10,14 @@ import numpy as npy
 import volmdlr as vm
 from genmechanics.dynamic_positions import Part, RevoluteLinkage, MovingMechanism, SlidingRevoluteLinkage, PrismaticLinkage, MechanismConfigurations
 
-ground = Part('Ground')
-crank = Part('Crank')
-rod = Part('Rod')
-piston = Part('piston')
 
 l = 0.15
 h = 0.32
 
+ground = Part('Ground')
+crank = Part('Crank')
+rod = Part('Rod')
+piston = Part('piston', interest_points=[vm.Point3D((0., 0., 0.1))])
 
 crank_ground = RevoluteLinkage(ground, vm.Point3D((0, 0, 0)), vm.x3D,
                                crank, vm.Point3D((0, 0, 0)),
@@ -44,7 +44,10 @@ mechanism = MovingMechanism([crank_ground, crank_rod, rod_piston, piston_ground]
 
 configuration = mechanism.solve_configurations({0: npy.arange(0, 2*3.14, 0.1)})
 configuration.plot2D(x=vm.y3D, y=vm.z3D, plot_frames=False)
+#configuration.plot2D(x=vm.x3D, y=vm.z3D, plot_frames=False)
 #configuration.plot2D(x=vm.x3D, y=vm.y3D, plot_frames=False)
 #configuration.plot2D(x=vm.x3D, y=vm.z3D, plot_frames=False)
 
 configuration.plot_kinematic_parameters(crank_ground, 0, piston_ground, 0)
+
+configuration.babylonjs(plot_frames=True)
