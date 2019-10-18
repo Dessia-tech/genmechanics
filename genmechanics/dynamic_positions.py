@@ -48,22 +48,41 @@ class Linkage(DessiaObject):
                               name=name)
 
 
+    def babylonjs(self):
+        s = 'var linkage_mesh = BABYLON.MeshBuilder.CreateSphere("default_linkage", {diameter: 0.02}, scene);\n'
+        return s
+    
+    
 class RevoluteLinkage(Linkage):
     holonomic = True
 
-    def __init__(self, part1, part1_position, part1_axis, part2, part2_position, name=''):
+    def __init__(self, part1, part1_position, part1_axis,
+                 part2, part2_position, part2_basis=vm.xyz.copy(), name=''):
         """
+        :param part2_basis: a basis defining orientation of linkage on part2
 
         """
 
         def basis(q):
-            return vm.xyz.Rotation(part1_axis, q[0])
+            return part2_basis.Rotation(part1_axis, q[0], copy=True)
 
         Linkage.__init__(self,
                          part1, lambda q: part1_position,
                          part2, lambda q: part2_position,
                          False,
                          basis, 1, name)
+        
+        DessiaObject.__init__(self,
+                              part1_axis=part1_axis)
+
+
+    def babylonjs(self):
+        s = 'var path = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*-0.03*self.part1_axis, *0.03*self.part1_axis)
+        s += 'var linkage_mesh = BABYLON.MeshBuilder.CreateTube("revolute", {path: path, radius: 0.02, sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene);\n'
+        s += 'linkage_mesh.enableEdgesRendering();\n'
+        s += 'linkage_mesh.edgesWidth = 0.4;\n'
+        s += 'linkage_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+        return s
 
 
 class SlidingRevoluteLinkage(Linkage):
@@ -86,30 +105,47 @@ class SlidingRevoluteLinkage(Linkage):
 class PrismaticLinkage(Linkage):
     holonomic = True
 
-    def __init__(self, part1, part1_initial_position, axis, part2, part2_position, name=''):
+    def __init__(self,
+                 part1, part1_initial_position, part1_axis,
+                 part2, part2_position, part2_basis=vm.xyz.copy(),
+                 name=''):
         """
         sliding on part1, fixed on part2
         """
 
         def basis(q):
-            return vm.xyz
+            return part2_basis
 
         Linkage.__init__(self,
-                         part1, lambda q: part1_initial_position+q[0]*axis,
+                         part1, lambda q: part1_initial_position+q[0]*part1_axis,
                          part2, lambda q: part2_position,
                          True,
                          basis, 1, name)
+        
+        DessiaObject.__init__(self,
+                              part1_axis=part1_axis,
+                              part2_basis=part2_basis)
+        
+    def babylonjs(self):
+        s = 'var linkage_mesh = BABYLON.MeshBuilder.CreateBox("revolute", {depth:0.06, height:0.03, width:0.03}, scene);\n'
+        s += 'linkage_mesh.enableEdgesRendering();\n'
+        s += 'linkage_mesh.edgesWidth = 0.3;\n'
+        s += 'linkage_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+        return s
+
 
 class BallLinkage(Linkage):
     holonomic = True
 
-    def __init__(self, part1, part1_position, part2, part2_position, name=''):
+    def __init__(self,
+                 part1, part1_position,
+                 part2, part2_position, name=''):
         """
         sliding on part1, fixed on part2
         """
 
         def basis(q):
-            b = vm.xyz.Rotation(vm.x3D, q[0])
+            b = vm.xyz.copy().Rotation(vm.x3D, q[0])
             b.Rotation(vm.y3D, q[1], False)
             b.Rotation(vm.z3D, q[2], False)
             return b
@@ -287,6 +323,18 @@ class MovingMechanism(Mechanism):
 
         return frame
 
+    def linkage_global_position(self, linkage, global_parameter_values):
+        if linkage.positions_require_kinematic_parameters:
+            ql = self.extract_linkage_parameters_values(linkage,
+                                                        global_parameter_values)
+        else:
+            ql = []
+            
+        
+        part1_frame = self.part_frame(linkage.part1, global_parameter_values)
+        return part1_frame.OldCoordinates(linkage.part1_position(ql))
+
+
     def extract_linkage_parameters_values(self, linkage, global_parameter_values):
 
         linkage_parameters = [global_parameter_values[self.kinematic_parameters_mapping[linkage, i]]\
@@ -356,17 +404,20 @@ class MovingMechanism(Mechanism):
                 if i in imposed_parameters:
                     basis_vector[i] = imposed_parameters[i][istep]
 
-
-            result = minimize(geometric_closing_residue, x0)
-            if result.fun < 1e-5:
-                x0 = result.x
-                q = basis_vector[:]
-                for qrv, i in zip(result.x, free_parameters):
-                    q[i] = qrv
-                qs.append(q)
+            if len(free_parameters) > 0:
+                result = minimize(geometric_closing_residue, x0)
+                if result.fun < 1e-5:
+                    x0 = result.x
+                    q = basis_vector[:]
+                    for qrv, i in zip(result.x, free_parameters):
+                        q[i] = qrv
+                    qs.append(q)
+                else:
+                    print('@istep {}: residue: {}'.format(istep, result.fun))
+                    print(result)
+            
             else:
-                print('@istep {}: residue: {}'.format(istep, result.fun))
-                print(result)
+                qs.append(basis_vector)
 
         return MechanismConfigurations(self, qs)
 
@@ -476,6 +527,7 @@ class MechanismConfigurations(DessiaObject):
 
         for istep, step in enumerate(steps):
             linkage_positions = {}
+            part_frames = {}
             for linkage in self.mechanism.linkages:
 
     #            flp1.origin.PlaneProjection2D(x, y).MPLPlot(ax=ax)
@@ -487,12 +539,14 @@ class MechanismConfigurations(DessiaObject):
 
                 part1_frame = self.mechanism.part_frame(linkage.part1,
                                                         step)
+                part_frames[linkage.part1] = part1_frame
     #
                 linkage_position1 = part1_frame.OldCoordinates(linkage.part1_position(ql))
                 linkage_position1_2D = linkage_position1.PlaneProjection2D(x, y)
 
                 part2_frame = self.mechanism.part_frame(linkage.part2,
                                                         step)
+                part_frames[linkage.part2] = part2_frame
     #
                 linkage_position2 = part2_frame.OldCoordinates(linkage.part2_position(ql))
                 linkage_position2_2D = linkage_position1.PlaneProjection2D(x, y)
@@ -525,9 +579,9 @@ class MechanismConfigurations(DessiaObject):
                 points = []
                 for linkage in linkages:
                     points.append(linkage_positions[linkage, part])
-                points.extend(part.interest_points)
+                points.extend([part_frames[part].OldCoordinates(p) for p in part.interest_points])
 #                print(points)
-                xm, ym, _ = vm.Point3D.mean_point(points).vector
+                xm, ym = vm.Point3D.mean_point(points).PlaneProjection2D(x, y).vector
 
                 if istep == 0:
                     ax.text(xm, ym, part.name + ' step 0',
@@ -569,7 +623,7 @@ class MechanismConfigurations(DessiaObject):
         ax.set_ylabel(str(y))
         ax.margins(.1)
 
-    def babylonjs(self, page='gm_babylonjs', plot_frames=False, plot_trajectories=False):
+    def babylonjs(self, page='gm_babylonjs', plot_frames=False, plot_trajectories=True):
         page+='.html'
 
         env = Environment(loader=PackageLoader('genmechanics', 'templates'),
@@ -585,8 +639,7 @@ class MechanismConfigurations(DessiaObject):
 #        part_frames = {}
 
         for part, linkages in self.mechanism.part_linkages().items():
-#            part_frame = self.mechanism.part_frame(part,
-#                                                   self.steps[0])
+
             for linkage in linkages:
                 if linkage.positions_require_kinematic_parameters:
                     ql = self.mechanism.extract_linkage_parameters_values(linkage,
@@ -613,6 +666,12 @@ class MechanismConfigurations(DessiaObject):
             for l in part.wireframe_lines(part_points[part]):
                 meshes_string += l.Babylon(color=colors[part])
                 meshes_string += 'part_meshes.push(line);\n'
+                
+#            # Adding interest points
+#            for point in part.interest_points:                
+#                meshes_string += 'var point = BABYLON.MeshBuilder.CreateSphere("interest_point", {diameter: 0.01}, scene);\n'
+#                meshes_string += 'point.position = new BABYLON.Vector3({}, {}, {});'.format(*point.vector)
+#                meshes_string += 'part_meshes.push(point);'
 
 
             if plot_frames:
@@ -623,15 +682,21 @@ class MechanismConfigurations(DessiaObject):
 
             meshes_string += 'parts.push(part_meshes);\n'
             
-            
+        linkages_string = 'var linkage_meshes = []\n'
+        for linkage in self.mechanism.linkages:
+            linkages_string += linkage.babylonjs()
+            linkages_string += 'linkage_meshes.push(linkage_mesh)\n'
             
         # Computing positions and orientations
         positions = []
         orientations = []
+        linkage_positions = []
 #        frame_babylon = vm.Frame3D(vm.o3D, vm.x3D, vm.z3D, vm.y3D)
         for step in self.steps:
             step_positions = []
             step_orientations = []
+            step_linkage_positions = []
+#            step_linkage_positions = []
             for part in self.mechanism.parts:
 
                 frame = round(self.mechanism.part_frame(part,
@@ -642,21 +707,28 @@ class MechanismConfigurations(DessiaObject):
                                           list(frame.v),
                                           list(frame.w)])
 
+            for linkage in self.mechanism.linkages:
+                step_linkage_positions.append(list(self.mechanism.linkage_global_position(linkage, step)))
 
             positions.append(step_positions)
             orientations.append(step_orientations)
+            linkage_positions.append(step_linkage_positions)
             
         trajectories = []
         if plot_trajectories:
             for part in self.mechanism.parts:
                 for point in part.interest_points:
                     trajectories.append([list(p.vector) for p in self.trajectory(point, part, self.mechanism.ground)])
+                    
+#        print(linkage_positions)
 
         script = template.render(center=(0, 0, 0),
                                  length=2*0.5,
                                  meshes_string=meshes_string,
+                                 linkages_string=linkages_string,
                                  positions=positions,
                                  orientations=orientations,
+                                 linkage_positions=linkage_positions,
                                  trajectories=trajectories)
 
         with open(page,'w') as file:

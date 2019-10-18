@@ -21,22 +21,22 @@ piston = Part('piston', interest_points=[vm.Point3D((0., 0., 0.1))])
 
 crank_ground = RevoluteLinkage(ground, vm.Point3D((0, 0, 0)), vm.x3D,
                                crank, vm.Point3D((0, 0, 0)),
-                               'crank_ground linkage')
+                               name='crank_ground linkage')
 
 crank_rod = RevoluteLinkage(crank, vm.Point3D((0, l, 0)), vm.x3D,
                             rod, vm.Point3D((0, 0, 0)),
-                            'crank rod linkage')
+                            name='crank rod linkage')
 
 rod_piston = RevoluteLinkage(rod, vm.Point3D((0., h, 0,)), vm.x3D,
                              piston, vm.Point3D((0 , 0, 0)),
-                             'rod_piston linkage')
+                             name='rod_piston linkage')
 
 piston_ground = PrismaticLinkage(ground, vm.Point3D((0, 0, 0.)), vm.z3D,
                                  piston, vm.Point3D((0., 0, 0, )),
-                                 'piston_ground linkage')
+                                 name='piston_ground linkage')
 
 mechanism = MovingMechanism([crank_ground, crank_rod, rod_piston, piston_ground],
-                            ground, 'Crank_rod_mechanism')
+                            ground, name='Crank_rod_mechanism')
 
 #manual_configuration = MechanismConfigurations(mechanism, [[3.1415/4, 3.1415/8, 0.2, -0.3]])
 #manual_configuration.plot2D(x=vm.y3D, y=vm.z3D)
