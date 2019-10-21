@@ -623,7 +623,11 @@ class MechanismConfigurations(DessiaObject):
         ax.set_ylabel(str(y))
         ax.margins(.1)
 
-    def babylonjs(self, page='gm_babylonjs', plot_frames=False, plot_trajectories=True):
+    def babylonjs(self, page='gm_babylonjs', plot_frames=False,
+                  plot_trajectories=True, use_cdn=False):
+        
+        print('use cdn', use_cdn)
+        
         page+='.html'
 
         env = Environment(loader=PackageLoader('genmechanics', 'templates'),
@@ -729,7 +733,8 @@ class MechanismConfigurations(DessiaObject):
                                  positions=positions,
                                  orientations=orientations,
                                  linkage_positions=linkage_positions,
-                                 trajectories=trajectories)
+                                 trajectories=trajectories,
+                                 use_cdn=use_cdn)
 
         with open(page,'w') as file:
             file.write(script)

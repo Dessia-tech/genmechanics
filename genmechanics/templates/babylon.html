@@ -18,11 +18,21 @@
       }
    </style>
     <!-- Link to the last version of BabylonJS -->
-    <script type="text/javascript" >{% include 'babylon.js' %}</script>
-    <script type="text/javascript" >{% include 'babylonjs.loaders.min.js' %}</script>
-    <script type="text/javascript" >{% include 'pep.js' %}</script>
-    <script type="text/javascript" >{% include 'earcut.min.js' %}</script>
-    <script src='https://preview.babylonjs.com/gui/babylon.gui.min.js'></script>
+
+    {% if use_cdn %}
+      <script src="https://preview.babylonjs.com/babylon.js"></script>
+      <script src="https://preview.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+      <script src="https://code.jquery.com/pep/0.4.3/pep.js"></script>
+      <script src='https://unpkg.com/earcut@2.1.1/dist/earcut.min.js'></script>
+      <script src='https://preview.babylonjs.com/gui/babylon.gui.min.js'></script>
+    {% else %}
+      <script type="text/javascript" >{% include 'babylon.js' %}</script>
+      <script type="text/javascript" >{% include 'babylonjs.loaders.min.js' %}</script>
+      <script type="text/javascript" >{% include 'pep.js' %}</script>
+      <script type="text/javascript" >{% include 'earcut.min.js' %}</script>
+      <script type="text/javascript" >{% include 'babylon.gui.min.js' %}</script>
+    {% endif %}
+
 </head>
 <body>
    <canvas id="renderCanvas"></canvas>
