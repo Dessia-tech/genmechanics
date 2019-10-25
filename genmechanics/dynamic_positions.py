@@ -28,10 +28,10 @@ from genmechanics.core import Part, Mechanism
 
 class Linkage(DessiaObject):
     def __init__(self,
-                 part1, part1_position,
-                 part2, part2_position,
+                 part1, part1_position_function, part1_basis_function,
+                 part2, part2_position_function, part2_basis_function,
                  positions_require_kinematic_parameters,
-                 basis,
+                 basis_require_kinematic_parameters,
                  number_kinematic_parameters,
                  name=''):
         """
@@ -39,122 +39,348 @@ class Linkage(DessiaObject):
         """
         DessiaObject.__init__(self,
                               part1=part1,
-                              part1_position=part1_position,
+                              part1_position_function=part1_position_function,
+                              part1_basis_function=part1_basis_function,
                               part2=part2,
-                              part2_position=part2_position,
+                              part2_position_function=part2_position_function,
+                              part2_basis_function=part2_basis_function,
                               positions_require_kinematic_parameters=positions_require_kinematic_parameters,
-                              basis=basis,
+                              basis_require_kinematic_parameters=basis_require_kinematic_parameters,
                               number_kinematic_parameters=number_kinematic_parameters,
                               name=name)
+        
+#    def part1_frame(self, linkage_parameters_values):
+#        return self.part1_basis(linkage_parameters_values)\
+#            .to_frame(self.part1_position(linkage_parameters_values))
+#
+#    def part2_frame(self, linkage_parameters_values):
+#        return self.part2_basis(linkage_parameters_values)\
+#            .to_frame(self.part2_position(linkage_parameters_values))
 
 
-    def babylonjs(self):
-        s = 'var linkage_mesh = BABYLON.MeshBuilder.CreateSphere("default_linkage", {diameter: 0.02}, scene);\n'
+    def frame(self, linkage_parameters_values, side):
+#        print('linkage_side', side)
+        if side:     
+#            print('\n====')
+#            print(self.part1_basis_function(linkage_parameters_values))
+#            print(self.part2_basis_function(linkage_parameters_values))
+#            
+#            #                linkage_basis = linkage.basis(linkage_parameters_values)
+#            linkage_basis = (self.part1_basis_function(linkage_parameters_values)
+#                             + self.part2_basis_function(linkage_parameters_values))
+#
+#            print('= ', linkage_basis)
+#
+#            
+#            origin = (self.part1_position_function(linkage_parameters_values) \
+#                      - linkage_basis.OldCoordinates(self.part2_position_function(linkage_parameters_values)))
+#            
+#            return linkage_basis.to_frame(origin)
+            
+            part1_frame = self.part1_basis_function(linkage_parameters_values)\
+                .to_frame(self.part1_position_function(linkage_parameters_values))
+            
+            part2_frame = -self.part2_basis_function(linkage_parameters_values)\
+                .to_frame(-self.part2_position_function(linkage_parameters_values))
+            
+            return part1_frame + part2_frame
+            
+        else:
+            part1_frame = -self.part1_basis_function(linkage_parameters_values)\
+                .to_frame(-self.part1_position_function(linkage_parameters_values))
+
+            part2_frame = self.part2_basis_function(linkage_parameters_values)\
+                .to_frame(self.part2_position_function(linkage_parameters_values))
+                        
+            return part2_frame + part1_frame
+            
+    def babylonjs(self, initial_linkage_parameters,
+                  part1_parent=None, part2_parent=None):
+        part1_position = self.part1_position_function(initial_linkage_parameters)        
+        part2_position = self.part2_position_function(initial_linkage_parameters)
+
+        s = ''        
+        if part1_parent is not None:
+            s += 'var linkage_part1_mesh = BABYLON.MeshBuilder.CreateSphere("default_linkage part1", {diameter: 0.02}, scene);\n'
+            s += 'linkage_part1_mesh.position = new BABYLON.Vector3({}, {}, {});\n'.format(*part1_position.vector)
+            s += 'linkage_part1_mesh.parent = {};\n'.format(part1_parent)
+
+        if part2_parent:
+            s += 'var linkage_part2_mesh = BABYLON.MeshBuilder.CreateSphere("default_linkage part2", {diameter: 0.02}, scene);\n'
+            s += 'linkage_part2_mesh.position = new BABYLON.Vector3({}, {}, {});\n'.format(*part2_position.vector)
+            s += 'linkage_part2_mesh.parent = {};\n'.format(part2_parent)
+
         return s
     
     
 class RevoluteLinkage(Linkage):
     holonomic = True
 
-    def __init__(self, part1, part1_position, part1_axis,
-                 part2, part2_position, part2_basis=vm.xyz.copy(), name=''):
+    def __init__(self,
+                 part1, part1_position, part1_basis,
+                 part2, part2_position, part2_basis, name=''):
         """
         :param part2_basis: a basis defining orientation of linkage on part2
 
         """
 
-        def basis(q):
-            return part2_basis.Rotation(part1_axis, q[0], copy=True)
+        def part1_basis_f(q):
+#            print('q', q)
+#            return part1_basis
+            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)
+
+        def part2_basis_f(q):
+#            return part2_basis.Rotation(part2_basis.u, q[0], copy=True)
+            return part2_basis
+
 
         Linkage.__init__(self,
-                         part1, lambda q: part1_position,
-                         part2, lambda q: part2_position,
-                         False,
-                         basis, 1, name)
+                         part1, lambda q: part1_position, part1_basis_f,
+                         part2, lambda q: part2_position, part2_basis_f,
+                         False, True,
+                         1, name)
         
         DessiaObject.__init__(self,
-                              part1_axis=part1_axis)
+                              part1_position=part1_position,
+                              part2_position=part2_position,
+                              part1_basis=part1_basis,
+                              part2_basis=part2_basis)
+        
 
 
-    def babylonjs(self):
-        s = 'var path = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*-0.03*self.part1_axis, *0.03*self.part1_axis)
-        s += 'var linkage_mesh = BABYLON.MeshBuilder.CreateTube("revolute", {path: path, radius: 0.02, sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene);\n'
-        s += 'linkage_mesh.enableEdgesRendering();\n'
-        s += 'linkage_mesh.edgesWidth = 0.4;\n'
-        s += 'linkage_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+    def babylonjs(self, initial_linkage_parameters,
+                  part1_parent=None, part2_parent=None):
+        s = ''
+        if part1_parent is not None:
+        
+            s += 'var path1 = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*(self.part1_position-0.03*self.part1_basis.u),
+                                                                                                           *(self.part1_position+0.03*self.part1_basis.u))
+            s += 'var linkage_part1_mesh = BABYLON.MeshBuilder.CreateTube("revolute part1", {path: path1, radius: 0.01, sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene);\n'
+            s += 'linkage_part1_mesh.enableEdgesRendering();\n'
+            s += 'linkage_part1_mesh.edgesWidth = 0.4;\n'
+            s += 'linkage_part1_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+            s += 'linkage_part1_mesh.parent = {};\n'.format(part1_parent)
+
+        
+        if part2_parent is not None:
+            s += 'var path2 = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*(self.part2_position-0.03*self.part2_basis.u),
+                                                                                                           *(self.part2_position+0.03*self.part2_basis.u))
+            s += 'var linkage_part2_mesh = BABYLON.MeshBuilder.CreateTube("revolute part2", {path: path2, radius: 0.015, sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene);\n'
+            s += 'linkage_part2_mesh.enableEdgesRendering();\n'
+            s += 'linkage_part2_mesh.edgesWidth = 0.4;\n'
+            s += 'linkage_part2_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+            s += 'linkage_part2_mesh.parent = {};\n'.format(part2_parent)
+        
         return s
 
 
 class SlidingRevoluteLinkage(Linkage):
     holonomic = True
 
-    def __init__(self, part1, part1_initial_position, axis, part2, part2_position, name=''):
+    def __init__(self,
+                 part1, part1_position, part1_basis,
+                 part2, part2_position, part2_basis, name=''):
         """
-        sliding on part1, fixed on part2
+        :param part2_basis: a basis defining orientation of linkage on part2
+
         """
 
-        def basis(q):
-            return vm.xyz.Rotation(axis, q[0])
+        def part1_position_f(q):
+            return part1_position + q[0]*part1_basis.u
+
+        def part2_position_f(q):
+            return part2_position
+
+        def part1_basis_f(q):
+            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)
 
         Linkage.__init__(self,
-                         part1, lambda q: part1_initial_position+q[1]*axis,
-                         part2, lambda q: part2_position,
-                         True,
-                         basis, 2, name)
+                         part1, part1_position_f, part1_basis_f,
+                         part2, part2_position_f, lambda q: part2_basis,
+                         True, True,
+                         2, name)
+        
+        DessiaObject.__init__(self,
+                              part1_position=part1_position,
+                              part2_position=part2_position,
+                              part1_basis=part1_basis,
+                              part2_basis=part2_basis)
+
+    def babylonjs(self, initial_linkage_parameters,
+                  part1_parent=None, part2_parent=None):
+#        part1_position = self.part1_position_function(initial_linkage_parameters)
+#        part1_basis = self.part1_position(initial_linkage_parameters)
+        
+#        part2_position = self.part2_position_function(initial_linkage_parameters)
+#        part2_basis = self.part2_position(initial_linkage_parameters)
+        s = ''
+        if part1_parent is not None:
+        
+            s += 'var path1 = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*(self.part1_position-0.1*self.part1_basis.u),
+                                                                                                            *(self.part1_position+0.1*self.part1_basis.u))
+            s += 'var linkage_part1_mesh = BABYLON.MeshBuilder.CreateTube("revolute part1", {path: path1, radius: 0.01, sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene);\n'
+            s += 'linkage_part1_mesh.enableEdgesRendering();\n'
+            s += 'linkage_part1_mesh.edgesWidth = 0.4;\n'
+            s += 'linkage_part1_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+            s += 'linkage_part1_mesh.parent = {};\n'.format(part1_parent)
+
+        
+        if part2_parent is not None:
+            s += 'var path2 = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*(self.part2_position-0.03*self.part2_basis.u),
+                                                                                                           *(self.part2_position+0.03*self.part2_basis.u))
+            s += 'var linkage_part2_mesh = BABYLON.MeshBuilder.CreateTube("revolute part2", {path: path2, radius: 0.015, sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene);\n'
+            s += 'linkage_part2_mesh.enableEdgesRendering();\n'
+            s += 'linkage_part2_mesh.edgesWidth = 0.4;\n'
+            s += 'linkage_part2_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+            s += 'linkage_part2_mesh.parent = {};\n'.format(part2_parent)
+        
+        return s
 
 class PrismaticLinkage(Linkage):
     holonomic = True
 
+
     def __init__(self,
-                 part1, part1_initial_position, part1_axis,
-                 part2, part2_position, part2_basis=vm.xyz.copy(),
-                 name=''):
+                 part1, part1_position, part1_basis,
+                 part2, part2_position, part2_basis, name=''):
         """
-        sliding on part1, fixed on part2
+        :param part2_basis: a basis defining orientation of linkage on part2
+
         """
 
-        def basis(q):
-            return part2_basis
+        def part1_position_f(q):
+            return part1_position + q[0]*part1_basis.u
+
+        def part2_position_f(q):
+            return part2_position
+
 
         Linkage.__init__(self,
-                         part1, lambda q: part1_initial_position+q[0]*part1_axis,
-                         part2, lambda q: part2_position,
-                         True,
-                         basis, 1, name)
+                         part1, part1_position_f, lambda q: part1_basis,
+                         part2, part2_position_f, lambda q: part2_basis,
+                         True, False,
+                         1, name)
         
         DessiaObject.__init__(self,
-                              part1_axis=part1_axis,
+                              part1_position=part1_position,
+                              part2_position=part2_position,
+                              part1_basis=part1_basis,
                               part2_basis=part2_basis)
         
-    def babylonjs(self):
-        s = 'var linkage_mesh = BABYLON.MeshBuilder.CreateBox("revolute", {depth:0.06, height:0.03, width:0.03}, scene);\n'
-        s += 'linkage_mesh.enableEdgesRendering();\n'
-        s += 'linkage_mesh.edgesWidth = 0.3;\n'
-        s += 'linkage_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+
+#    def __init__(self,
+#                 part1, part1_initial_position, part1_axis,
+#                 part2, part2_position, part2_basis=vm.xyz.copy(),
+#                 name=''):
+#        """
+#        sliding on part1, fixed on part2
+#        """
+#
+#        def basis(q):
+#            return part2_basis
+#
+#        Linkage.__init__(self,
+#                         part1, lambda q: part1_initial_position+q[0]*part1_axis,
+#                         part2, lambda q: part2_position,
+#                         True, False,
+#                         basis, 1, name)
+#        
+#        DessiaObject.__init__(self,
+#                              part1_axis=part1_axis,
+#                              part2_basis=part2_basis)
+        
+    def babylonjs(self, initial_linkage_parameters, part1_parent=None, part2_parent=None):
+        
+        bp1 = self.part1_basis_function(initial_linkage_parameters)
+        bp2 = self.part2_basis_function(initial_linkage_parameters)
+        s = ''
+        if part1_parent is not None:
+            s += 'var linkage_part1_mesh = BABYLON.MeshBuilder.CreateBox("prismatic part1", {depth:0.015, height:0.015, width:0.25}, scene);\n'
+            s += 'linkage_part1_mesh.parent = {};\n'.format(part1_parent)
+            s += 'linkage_part1_mesh.position = new BABYLON.Vector3({}, {}, {});\n'.format(*self.part1_position_function(initial_linkage_parameters))
+            s += 'linkage_part1_mesh.rotation = BABYLON.Vector3.RotationFromAxis(new BABYLON.Vector3({}, {}, {}),new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {}));\n'.format(*bp1.u, *bp1.v, *bp1.w)
+            s += 'linkage_part1_mesh.enableEdgesRendering();\n'
+            s += 'linkage_part1_mesh.edgesWidth = 0.3;\n'
+            s += 'linkage_part1_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+        
+        if part2_parent is not None:
+            s += 'var linkage_part2_mesh = BABYLON.MeshBuilder.CreateBox("prismatic part2", {depth:0.03, height:0.03, width:0.06}, scene);\n'
+            s += 'linkage_part2_mesh.parent = {};\n'.format(part2_parent)
+            s += 'linkage_part2_mesh.position = new BABYLON.Vector3({}, {}, {});\n'.format(*self.part2_position_function(initial_linkage_parameters))
+            s += 'linkage_part2_mesh.rotation = BABYLON.Vector3.RotationFromAxis(new BABYLON.Vector3({}, {}, {}),new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {}));\n'.format(*bp2.u, *bp2.v, *bp2.w)
+            s += 'linkage_part2_mesh.enableEdgesRendering();\n'
+            s += 'linkage_part2_mesh.edgesWidth = 0.3;\n'
+            s += 'linkage_part2_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
+            
         return s
 
 
 class BallLinkage(Linkage):
     holonomic = True
+    
+    
+#        def __init__(self,
+#                 part1, part1_position, part1_basis,
+#                 part2, part2_position, part2_basis, name=''):
+#        """
+#        :param part2_basis: a basis defining orientation of linkage on part2
+#
+#        """
+#
+#        def part1_basis_f(q):
+##            print('q', q)
+##            return part1_basis
+#            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)
+#
+#        def part2_basis_f(q):
+##            return part2_basis.Rotation(part2_basis.u, q[0], copy=True)
+#            return part2_basis
+#
+#
+#        Linkage.__init__(self,
+#                         part1, lambda q: part1_position, part1_basis_f,
+#                         part2, lambda q: part2_position, part2_basis_f,
+#                         False, True,
+#                         1, name)
+#        
+#        DessiaObject.__init__(self,
+#                              part1_position=part1_position,
+#                              part2_position=part2_position,
+#                              part1_basis=part1_basis,
+#                              part2_basis=part2_basis)
+        
 
     def __init__(self,
-                 part1, part1_position,
-                 part2, part2_position, name=''):
-        """
-        sliding on part1, fixed on part2
+                 part1, part1_position, part1_basis,
+                 part2, part2_position, part2_basis,
+                 name=''):
         """
 
-        def basis(q):
-            b = vm.xyz.copy().Rotation(vm.x3D, q[0])
-            b.Rotation(vm.y3D, q[1], False)
-            b.Rotation(vm.z3D, q[2], False)
-            return b
+        """
+
+        def part1_basis_f(q):
+#            print('q', q)
+#            return part1_basis
+            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)\
+                              .Rotation(part1_basis.v, q[1], copy=True)\
+                              .Rotation(part1_basis.w, q[2], copy=True)
+
+        def part2_basis_f(q):
+#            return part2_basis.Rotation(part2_basis.u, q[0], copy=True)
+            return part2_basis
+
 
         Linkage.__init__(self,
-                         part1, lambda q: part1_position,
-                         part2, lambda q: part2_position,
-                         False,
-                         basis, 3, name)
+                         part1, lambda q: part1_position, part1_basis_f,
+                         part2, lambda q: part2_position, part2_basis_f,
+                         False, True,
+                         3, name)
+        
+        DessiaObject.__init__(self,
+                              part1_position=part1_position,
+                              part2_position=part2_position,
+                              part1_basis=part1_basis,
+                              part2_basis=part2_basis)
 
 #class PartWireFrame(Part):
 #    def __init__(self, part):
@@ -290,21 +516,22 @@ class MovingMechanism(Mechanism):
             linkage_parameters_values = self.extract_linkage_parameters_values(linkage, kinematic_parameters_values)
 #            print('lpv', linkage_parameters_values)
 
-            if linkage_side:
-                linkage_basis = linkage.basis(linkage_parameters_values)
-                origin = (linkage.part1_position(linkage_parameters_values) \
-                          - linkage_basis.OldCoordinates(linkage.part2_position(linkage_parameters_values)))
-            else:
-                linkage_basis = -linkage.basis(linkage_parameters_values)
-                origin = (linkage.part2_position(linkage_parameters_values) \
-                          - linkage_basis.OldCoordinates(linkage.part1_position(linkage_parameters_values)))
-
-#            print('linkage basis: ', linkage_basis)
-            linkage_frame = vm.Frame3D(origin,
-                                       linkage_basis.u,
-                                       linkage_basis.v,
-                                       linkage_basis.w,
-                                       )
+#            if linkage_side:
+#                linkage_basis = linkage.basis(linkage_parameters_values)
+#                origin = (linkage.part1_position(linkage_parameters_values) \
+#                          - linkage_basis.OldCoordinates(linkage.part2_position(linkage_parameters_values)))
+#            else:
+#                linkage_basis = -linkage.basis(linkage_parameters_values)
+#                origin = (linkage.part2_position(linkage_parameters_values) \
+#                          - linkage_basis.OldCoordinates(linkage.part1_position(linkage_parameters_values)))
+#
+##            print('linkage basis: ', linkage_basis)
+#            linkage_frame = vm.Frame3D(origin,
+#                                       linkage_basis.u,
+#                                       linkage_basis.v,
+#                                       linkage_basis.w,
+#                                       )
+            linkage_frame = linkage.frame(linkage_parameters_values, side=linkage_side)
 
 
 #                origin = linkage.part2_position(linkage_parameters_values) - linkage.part1_position(linkage_parameters_values)
@@ -332,11 +559,12 @@ class MovingMechanism(Mechanism):
             
         
         part1_frame = self.part_frame(linkage.part1, global_parameter_values)
-        return part1_frame.OldCoordinates(linkage.part1_position(ql))
+        return part1_frame.OldCoordinates(linkage.part1_position_function(ql))
 
 
     def extract_linkage_parameters_values(self, linkage, global_parameter_values):
-
+#        if linkage in self.opened_linkages:# TODO: be sure of this!
+#            return []
         linkage_parameters = [global_parameter_values[self.kinematic_parameters_mapping[linkage, i]]\
                for i in range(linkage.number_kinematic_parameters)]
         return linkage_parameters
@@ -346,8 +574,8 @@ class MovingMechanism(Mechanism):
             ql = self.extract_linkage_parameters_values(linkage, global_parameter_values)
         else:
             ql = []
-        position1 = self.part_frame(linkage.part1, global_parameter_values).OldCoordinates(linkage.part1_position(ql))
-        position2 = self.part_frame(linkage.part2, global_parameter_values).OldCoordinates(linkage.part2_position(ql))
+        position1 = self.part_frame(linkage.part1, global_parameter_values).OldCoordinates(linkage.part1_position_function(ql))
+        position2 = self.part_frame(linkage.part2, global_parameter_values).OldCoordinates(linkage.part2_position_function(ql))
         return position2 - position1
 
     def opened_linkage_misalignment(self, linkage, global_parameter_values):
@@ -541,14 +769,14 @@ class MechanismConfigurations(DessiaObject):
                                                         step)
                 part_frames[linkage.part1] = part1_frame
     #
-                linkage_position1 = part1_frame.OldCoordinates(linkage.part1_position(ql))
+                linkage_position1 = part1_frame.OldCoordinates(linkage.part1_position_function(ql))
                 linkage_position1_2D = linkage_position1.PlaneProjection2D(x, y)
 
                 part2_frame = self.mechanism.part_frame(linkage.part2,
                                                         step)
                 part_frames[linkage.part2] = part2_frame
     #
-                linkage_position2 = part2_frame.OldCoordinates(linkage.part2_position(ql))
+                linkage_position2 = part2_frame.OldCoordinates(linkage.part2_position_function(ql))
                 linkage_position2_2D = linkage_position1.PlaneProjection2D(x, y)
 
                 if linkage_position1 != linkage_position2:
@@ -626,7 +854,6 @@ class MechanismConfigurations(DessiaObject):
     def babylonjs(self, page='gm_babylonjs', plot_frames=False,
                   plot_trajectories=True, use_cdn=False):
         
-        print('use cdn', use_cdn)
         
         page+='.html'
 
@@ -653,9 +880,9 @@ class MechanismConfigurations(DessiaObject):
 
 
                 if part == linkage.part1:
-                    linkage_position = linkage.part1_position(ql)
+                    linkage_position = linkage.part1_position_function(ql)
                 else:
-                    linkage_position = linkage.part2_position(ql)
+                    linkage_position = linkage.part2_position_function(ql)
 
                 part_points[part].append(linkage_position)
 
@@ -663,13 +890,16 @@ class MechanismConfigurations(DessiaObject):
                 part_points[part].append(point)
 
 
-        meshes_string = 'var parts = [];\n'
+        meshes_string = 'var parts_parent = [];\n'
 
         for part in self.mechanism.parts:
-            meshes_string += 'var part_meshes = [];\n'
-            for l in part.wireframe_lines(part_points[part]):
-                meshes_string += l.Babylon(color=colors[part])
-                meshes_string += 'part_meshes.push(line);\n'
+            meshes_string += 'var part_children = [];\n'
+            lines = part.wireframe_lines(part_points[part])
+            meshes_string += lines[0].Babylon(name='part_parent', color=colors[part])
+            meshes_string += 'parts_parent.push(part_parent);\n'
+            for l in lines[1:]:
+                meshes_string += l.Babylon(color=colors[part], parent='part_parent')
+#                meshes_string += 'part_meshes.push(line);\n'
                 
 #            # Adding interest points
 #            for point in part.interest_points:                
@@ -679,17 +909,36 @@ class MechanismConfigurations(DessiaObject):
 
 
             if plot_frames:
-                meshes_string += vm.oxyz.babylonjs()
-                meshes_string += 'part_meshes.push(line1);\n'
-                meshes_string += 'part_meshes.push(line2);\n'
-                meshes_string += 'part_meshes.push(line3);\n'
+                meshes_string += vm.oxyz.babylonjs(parent='part_parent')
+#                meshes_string += 'part_meshes.push(line1);\n'
+#                meshes_string += 'part_meshes.push(line2);\n'
+#                meshes_string += 'part_meshes.push(line3);\n'
 
-            meshes_string += 'parts.push(part_meshes);\n'
+#            meshes_string += 'parts.push(part_meshes);\n'
             
-        linkages_string = 'var linkage_meshes = []\n'
+        linkages_string = ''
         for linkage in self.mechanism.linkages:
-            linkages_string += linkage.babylonjs()
-            linkages_string += 'linkage_meshes.push(linkage_mesh)\n'
+            if linkage not in self.mechanism.opened_linkages:
+                
+                ql = self.mechanism.extract_linkage_parameters_values(linkage,
+                                                                      self.steps[0])
+            else:
+                ql = []
+
+            if linkage.part1 in self.mechanism.parts:
+                part1_parent = 'parts_parent[{}]'.format(self.mechanism.parts.index(linkage.part1))
+            else:
+                part1_parent = None
+            
+            if linkage.part2 in self.mechanism.parts:
+                part2_parent = 'parts_parent[{}]'.format(self.mechanism.parts.index(linkage.part2))
+            else:
+                part2_parent = None
+
+            linkages_string += linkage.babylonjs(ql,
+                                                 part1_parent=part1_parent,
+                                                 part2_parent=part2_parent)
+
             
         # Computing positions and orientations
         positions = []
