@@ -657,9 +657,24 @@ class MechanismConfigurations(DessiaObject):
         DessiaObject.__init__(self,
                               mechanism=mechanism,
                               steps=steps)
+        
+        self.trajectories = {}
 
     def opened_linkages_residue(self):
         return self.mechanism.opened_linkages_residue(self.kinematic_parameters_values)
+    
+    def interpolate_step(self, istep):
+        """
+        :param istep: can be a float
+        """
+        
+        istep1 = int(istep)
+        alpha = istep - istep1
+        
+        
+        new_step = [(1-alpha)*s1+alpha*s2 for s1, s2 in zip(self.steps[istep1],
+                                                            self.steps[istep1+1])]
+        return new_step
 
     def plot_kinematic_parameters(self,
                                   linkage1, kinematic_parameter1,
@@ -680,19 +695,25 @@ class MechanismConfigurations(DessiaObject):
         return fig, ax
 
     def trajectory(self, point, part, reference_part):
+        if (point, part, reference_part) in self.trajectories:
+            return self.trajectories[point, part, reference_part]
+        
         trajectory = []
         for step in self.steps:
             frame1 = self.mechanism.part_frame(part, step)
             frame2 = self.mechanism.part_frame(reference_part, step)
             frame = frame1 - frame2
             trajectory.append(frame.OldCoordinates(point))
+        
+        self.trajectories[point, part, reference_part] = trajectory
+        
         return trajectory
 
-    def plot2D_trajectory(self, point, part, reference_part, x=vm.x3D, y=vm.y3D):
+    def plot2D_trajectory(self, point, part, reference_part, x=vm.x3D, y=vm.y3D, equal_aspect=True):
         xt = []
         yt = []
-        for point in self.trajectory(point, part, reference_part):
-            xp, yp = point.PlaneProjection2D(x, y)
+        for traj_point in self.trajectory(point, part, reference_part):
+            xp, yp = traj_point.PlaneProjection2D(x, y)
             xt.append(xp)
             yt.append(yp)
 
@@ -703,9 +724,12 @@ class MechanismConfigurations(DessiaObject):
         ax.set_ylabel(str(y))
         ax.set_title('Trajectory of point {} on part {} relatively to part {}'.format(str(point), part.name, reference_part.name))
 
+        if equal_aspect:
+            ax.set_aspect('equal')
+
         return fig, ax
 
-    def plot_trajectory(self, point, part, reference_part):
+    def plot_trajectory(self, point, part, reference_part, equal_aspect=True):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
@@ -725,7 +749,9 @@ class MechanismConfigurations(DessiaObject):
         ax.set_zlabel('Z')
         ax.set_title('Trajectory of point {} on part {} relatively to part {}'.format(str(point), part.name, reference_part.name))
 
-#        ax.set_aspect('equal')
+
+        if equal_aspect:
+            ax.set_aspect('equal')
 #        fig.canvas.set_window_title('Trajectory')
         return fig, ax
 
@@ -969,9 +995,11 @@ class MechanismConfigurations(DessiaObject):
             
         trajectories = []
         if plot_trajectories:
-            for part in self.mechanism.parts:
-                for point in part.interest_points:
-                    trajectories.append([list(p.vector) for p in self.trajectory(point, part, self.mechanism.ground)])
+            for trajectory in self.trajectories.values():
+                trajectories.append([list(p) for p in trajectory])
+#            for point, part in self.mechanism.parts:
+#                for point in part.interest_points:
+#                    trajectories.append([list(p.vector) for p in self.trajectory(point, part, self.mechanism.ground)])
                     
 #        print(linkage_positions)
 
