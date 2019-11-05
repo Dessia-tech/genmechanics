@@ -43,7 +43,7 @@ def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
 #    nx.draw(G,pos)
 #    nx.draw_networkx_labels(G,pos)
                
-    for Gi in nx.connected_component_subgraphs(G):
+    for Gi in (G.subgraph(c).copy() for c in nx.connected_components(G)):
         M=nx.bipartite.maximum_matching(Gi)
     #    print('M',M,len(M))
         
@@ -117,7 +117,7 @@ def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
             G1p.add_edge(e[1],e[0])   
 
     
-    for G1i in nx.connected_component_subgraphs(G1):
+    for G1i in (G1.subgraph(c).copy() for c in nx.connected_components(G1)):#nx.connected_component_subgraphs(G1):
         M1=nx.bipartite.maximum_matching(G1i)
     
 

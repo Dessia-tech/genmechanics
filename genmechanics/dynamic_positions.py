@@ -935,7 +935,7 @@ class MechanismConfigurations(DessiaObject):
 
 
             if plot_frames:
-                meshes_string += vm.oxyz.babylonjs(parent='part_parent')
+                meshes_string += vm.oxyz.babylonjs(parent='part_parent', size=0.15)
 #                meshes_string += 'part_meshes.push(line1);\n'
 #                meshes_string += 'part_meshes.push(line2);\n'
 #                meshes_string += 'part_meshes.push(line3);\n'
