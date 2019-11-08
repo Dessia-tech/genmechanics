@@ -59,23 +59,7 @@ class Linkage(DessiaObject):
 
 
     def frame(self, linkage_parameters_values, side):
-#        print('linkage_side', side)
         if side:     
-#            print('\n====')
-#            print(self.part1_basis_function(linkage_parameters_values))
-#            print(self.part2_basis_function(linkage_parameters_values))
-#            
-#            #                linkage_basis = linkage.basis(linkage_parameters_values)
-#            linkage_basis = (self.part1_basis_function(linkage_parameters_values)
-#                             + self.part2_basis_function(linkage_parameters_values))
-#
-#            print('= ', linkage_basis)
-#
-#            
-#            origin = (self.part1_position_function(linkage_parameters_values) \
-#                      - linkage_basis.OldCoordinates(self.part2_position_function(linkage_parameters_values)))
-#            
-#            return linkage_basis.to_frame(origin)
             
             part1_frame = self.part1_basis_function(linkage_parameters_values)\
                 .to_frame(self.part1_position_function(linkage_parameters_values))
@@ -125,12 +109,9 @@ class RevoluteLinkage(Linkage):
         """
 
         def part1_basis_f(q):
-#            print('q', q)
-#            return part1_basis
             return part1_basis.Rotation(part1_basis.u, q[0], copy=True)
 
         def part2_basis_f(q):
-#            return part2_basis.Rotation(part2_basis.u, q[0], copy=True)
             return part2_basis
 
 
@@ -316,39 +297,7 @@ class PrismaticLinkage(Linkage):
 
 
 class BallLinkage(Linkage):
-    holonomic = True
-    
-    
-#        def __init__(self,
-#                 part1, part1_position, part1_basis,
-#                 part2, part2_position, part2_basis, name=''):
-#        """
-#        :param part2_basis: a basis defining orientation of linkage on part2
-#
-#        """
-#
-#        def part1_basis_f(q):
-##            print('q', q)
-##            return part1_basis
-#            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)
-#
-#        def part2_basis_f(q):
-##            return part2_basis.Rotation(part2_basis.u, q[0], copy=True)
-#            return part2_basis
-#
-#
-#        Linkage.__init__(self,
-#                         part1, lambda q: part1_position, part1_basis_f,
-#                         part2, lambda q: part2_position, part2_basis_f,
-#                         False, True,
-#                         1, name)
-#        
-#        DessiaObject.__init__(self,
-#                              part1_position=part1_position,
-#                              part2_position=part2_position,
-#                              part1_basis=part1_basis,
-#                              part2_basis=part2_basis)
-        
+    holonomic = True        
 
     def __init__(self,
                  part1, part1_position, part1_basis,
@@ -359,14 +308,11 @@ class BallLinkage(Linkage):
         """
 
         def part1_basis_f(q):
-#            print('q', q)
-#            return part1_basis
             return part1_basis.Rotation(part1_basis.u, q[0], copy=True)\
                               .Rotation(part1_basis.v, q[1], copy=True)\
                               .Rotation(part1_basis.w, q[2], copy=True)
 
         def part2_basis_f(q):
-#            return part2_basis.Rotation(part2_basis.u, q[0], copy=True)
             return part2_basis
 
 
@@ -381,11 +327,6 @@ class BallLinkage(Linkage):
                               part2_position=part2_position,
                               part1_basis=part1_basis,
                               part2_basis=part2_basis)
-
-#class PartWireFrame(Part):
-#    def __init__(self, part):
-#        Part.__init__(self, name=part.name, interest_points=part.interest_points)
-
 
 
 class MovingMechanism(Mechanism):
@@ -421,9 +362,8 @@ class MovingMechanism(Mechanism):
                                    and not l in self.opened_linkages\
                                    and not l.positions_require_kinematic_parameters
                                ]
-#            print(ground_distance)
+
             linkage_to_delete = max(ground_distance, key=lambda x:x[1])[0]
-#            print(linkage_to_delete)
             self.opened_linkages.append(linkage_to_delete)
             graph.remove_node(linkage_to_delete)
 
@@ -500,7 +440,6 @@ class MovingMechanism(Mechanism):
         else:
             path = []
             raw_path = list(nx.shortest_path(self.settings_graph, part1, part2))
-#            print('rp', raw_path)
             for part1, linkage, part2 in zip(raw_path[:-2:2], raw_path[1::2], raw_path[2::2]+[part2]):
                 path.append((part1, linkage, linkage.part1==part1, part2))
 
@@ -510,43 +449,9 @@ class MovingMechanism(Mechanism):
     def part_frame(self, part, kinematic_parameters_values):
         frame = vm.oxyz
         for part1, linkage, linkage_side, part2 in self.settings_path(self.ground, part):
-#            print('\nj', part1.name, linkage.name, linkage_side, part2.name)
-#            linkage_parameters_values = [kinematic_parameters_values[self.kinematic_parameters_mapping[linkage, i]]\
-#                                         for i in range(linkage.number_kinematic_parameters)]
             linkage_parameters_values = self.extract_linkage_parameters_values(linkage, kinematic_parameters_values)
-#            print('lpv', linkage_parameters_values)
-
-#            if linkage_side:
-#                linkage_basis = linkage.basis(linkage_parameters_values)
-#                origin = (linkage.part1_position(linkage_parameters_values) \
-#                          - linkage_basis.OldCoordinates(linkage.part2_position(linkage_parameters_values)))
-#            else:
-#                linkage_basis = -linkage.basis(linkage_parameters_values)
-#                origin = (linkage.part2_position(linkage_parameters_values) \
-#                          - linkage_basis.OldCoordinates(linkage.part1_position(linkage_parameters_values)))
-#
-##            print('linkage basis: ', linkage_basis)
-#            linkage_frame = vm.Frame3D(origin,
-#                                       linkage_basis.u,
-#                                       linkage_basis.v,
-#                                       linkage_basis.w,
-#                                       )
             linkage_frame = linkage.frame(linkage_parameters_values, side=linkage_side)
-
-
-#                origin = linkage.part2_position(linkage_parameters_values) - linkage.part1_position(linkage_parameters_values)
-#                linkage_frame = vm.Frame3D(origin,
-#                                           linkage_basis.u,
-#                                           linkage_basis.v,
-#                                           linkage_basis.w,
-#                                           )
-
-#            print('linkage_frame', linkage_frame)
-#            print('frame', frame)
-#            frame += linkage_frame
             frame = frame + linkage_frame
-#            print('frame after', frame)
-
 
         return frame
 
@@ -563,8 +468,6 @@ class MovingMechanism(Mechanism):
 
 
     def extract_linkage_parameters_values(self, linkage, global_parameter_values):
-#        if linkage in self.opened_linkages:# TODO: be sure of this!
-#            return []
         linkage_parameters = [global_parameter_values[self.kinematic_parameters_mapping[linkage, i]]\
                for i in range(linkage.number_kinematic_parameters)]
         return linkage_parameters
@@ -834,7 +737,6 @@ class MechanismConfigurations(DessiaObject):
                 for linkage in linkages:
                     points.append(linkage_positions[linkage, part])
                 points.extend([part_frames[part].OldCoordinates(p) for p in part.interest_points])
-#                print(points)
                 xm, ym = vm.Point3D.mean_point(points).PlaneProjection2D(x, y).vector
 
                 if istep == 0:
@@ -1001,7 +903,6 @@ class MechanismConfigurations(DessiaObject):
 #                for point in part.interest_points:
 #                    trajectories.append([list(p.vector) for p in self.trajectory(point, part, self.mechanism.ground)])
                     
-#        print(linkage_positions)
 
         script = template.render(center=(0, 0, 0),
                                  length=2*0.5,
