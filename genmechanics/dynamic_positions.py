@@ -7,6 +7,8 @@
 import os
 import webbrowser
 
+import math
+import random
 import numpy as npy
 
 from matplotlib.colors import hsv_to_rgb
@@ -25,6 +27,28 @@ import volmdlr as vm
 from genmechanics.core import Part, Mechanism
 
 
+class Parameter(DessiaObject):
+    def __init__(self, lower_bound, upper_bound, periodicity=None):
+        DessiaObject.__init__(self,
+                              lower_bound=lower_bound,
+                              upper_bound=upper_bound,
+                              periodicity=periodicity)
+    def random_value(self):
+        return random.uniform(self.lower_bound, self.upper_bound)
+    
+    def are_values_equal(self, value1, value2, tol=1e-2):
+        if self.periodicity is not None:
+            value1 = value1 % self.periodicity
+            value2 = value2 % self.periodicity
+            
+        return math.isclose(value1, value2, abs_tol=tol)
+            
+
+    def optimizer_bounds(self):
+        if self.periodicity is not None:
+            return (self.lower_bound-0.5*self.periodicity,
+                    self.upper_bound+0.5*self.periodicity)
+        
 
 class Linkage(DessiaObject):
     def __init__(self,
@@ -32,7 +56,7 @@ class Linkage(DessiaObject):
                  part2, part2_position_function, part2_basis_function,
                  positions_require_kinematic_parameters,
                  basis_require_kinematic_parameters,
-                 number_kinematic_parameters,
+                 kinematic_parameters,
                  name=''):
         """
 
@@ -46,44 +70,37 @@ class Linkage(DessiaObject):
                               part2_basis_function=part2_basis_function,
                               positions_require_kinematic_parameters=positions_require_kinematic_parameters,
                               basis_require_kinematic_parameters=basis_require_kinematic_parameters,
-                              number_kinematic_parameters=number_kinematic_parameters,
+                              kinematic_parameters=kinematic_parameters,
+                              number_kinematic_parameters=len(kinematic_parameters),
                               name=name)
-        
-#    def part1_frame(self, linkage_parameters_values):
-#        return self.part1_basis(linkage_parameters_values)\
-#            .to_frame(self.part1_position(linkage_parameters_values))
-#
-#    def part2_frame(self, linkage_parameters_values):
-#        return self.part2_basis(linkage_parameters_values)\
-#            .to_frame(self.part2_position(linkage_parameters_values))
 
 
     def frame(self, linkage_parameters_values, side):
-        if side:     
-            
+        if side:
+
             part1_frame = self.part1_basis_function(linkage_parameters_values)\
                 .to_frame(self.part1_position_function(linkage_parameters_values))
-            
+
             part2_frame = -self.part2_basis_function(linkage_parameters_values)\
                 .to_frame(-self.part2_position_function(linkage_parameters_values))
-            
+
             return part1_frame + part2_frame
-            
+
         else:
             part1_frame = -self.part1_basis_function(linkage_parameters_values)\
                 .to_frame(-self.part1_position_function(linkage_parameters_values))
 
             part2_frame = self.part2_basis_function(linkage_parameters_values)\
                 .to_frame(self.part2_position_function(linkage_parameters_values))
-                        
+
             return part2_frame + part1_frame
-            
+
     def babylonjs(self, initial_linkage_parameters,
                   part1_parent=None, part2_parent=None):
-        part1_position = self.part1_position_function(initial_linkage_parameters)        
+        part1_position = self.part1_position_function(initial_linkage_parameters)
         part2_position = self.part2_position_function(initial_linkage_parameters)
 
-        s = ''        
+        s = ''
         if part1_parent is not None:
             s += 'var linkage_part1_mesh = BABYLON.MeshBuilder.CreateSphere("default_linkage part1", {diameter: 0.02}, scene);\n'
             s += 'linkage_part1_mesh.position = new BABYLON.Vector3({}, {}, {});\n'.format(*part1_position.vector)
@@ -95,8 +112,8 @@ class Linkage(DessiaObject):
             s += 'linkage_part2_mesh.parent = {};\n'.format(part2_parent)
 
         return s
-    
-    
+
+
 class RevoluteLinkage(Linkage):
     holonomic = True
 
@@ -119,21 +136,21 @@ class RevoluteLinkage(Linkage):
                          part1, lambda q: part1_position, part1_basis_f,
                          part2, lambda q: part2_position, part2_basis_f,
                          False, True,
-                         1, name)
-        
+                         [Parameter(0., 2*math.pi, 2*math.pi)], name)
+
         DessiaObject.__init__(self,
                               part1_position=part1_position,
                               part2_position=part2_position,
                               part1_basis=part1_basis,
                               part2_basis=part2_basis)
-        
+
 
 
     def babylonjs(self, initial_linkage_parameters,
                   part1_parent=None, part2_parent=None):
         s = ''
         if part1_parent is not None:
-        
+
             s += 'var path1 = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*(self.part1_position-0.03*self.part1_basis.u),
                                                                                                            *(self.part1_position+0.03*self.part1_basis.u))
             s += 'var linkage_part1_mesh = BABYLON.MeshBuilder.CreateTube("revolute part1", {path: path1, radius: 0.01, sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene);\n'
@@ -142,7 +159,7 @@ class RevoluteLinkage(Linkage):
             s += 'linkage_part1_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
             s += 'linkage_part1_mesh.parent = {};\n'.format(part1_parent)
 
-        
+
         if part2_parent is not None:
             s += 'var path2 = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*(self.part2_position-0.03*self.part2_basis.u),
                                                                                                            *(self.part2_position+0.03*self.part2_basis.u))
@@ -151,7 +168,7 @@ class RevoluteLinkage(Linkage):
             s += 'linkage_part2_mesh.edgesWidth = 0.4;\n'
             s += 'linkage_part2_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
             s += 'linkage_part2_mesh.parent = {};\n'.format(part2_parent)
-        
+
         return s
 
 
@@ -163,7 +180,7 @@ class SlidingRevoluteLinkage(Linkage):
                  part2, part2_position, part2_basis, name=''):
         """
         :param part2_basis: a basis defining orientation of linkage on part2
-
+        The first kineamtic parameter is the translation, the second the rotation
         """
 
         def part1_position_f(q):
@@ -173,14 +190,15 @@ class SlidingRevoluteLinkage(Linkage):
             return part2_position
 
         def part1_basis_f(q):
-            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)
+            return part1_basis.Rotation(part1_basis.u, q[1], copy=True)
 
         Linkage.__init__(self,
                          part1, part1_position_f, part1_basis_f,
                          part2, part2_position_f, lambda q: part2_basis,
                          True, True,
-                         2, name)
-        
+                         [Parameter(0., 2*math.pi, 2*math.pi),
+                          Parameter(-1., 1., None)], name)
+
         DessiaObject.__init__(self,
                               part1_position=part1_position,
                               part2_position=part2_position,
@@ -191,12 +209,12 @@ class SlidingRevoluteLinkage(Linkage):
                   part1_parent=None, part2_parent=None):
 #        part1_position = self.part1_position_function(initial_linkage_parameters)
 #        part1_basis = self.part1_position(initial_linkage_parameters)
-        
+
 #        part2_position = self.part2_position_function(initial_linkage_parameters)
 #        part2_basis = self.part2_position(initial_linkage_parameters)
         s = ''
         if part1_parent is not None:
-        
+
             s += 'var path1 = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*(self.part1_position-0.1*self.part1_basis.u),
                                                                                                             *(self.part1_position+0.1*self.part1_basis.u))
             s += 'var linkage_part1_mesh = BABYLON.MeshBuilder.CreateTube("revolute part1", {path: path1, radius: 0.01, sideOrientation:BABYLON.Mesh.DOUBLESIDE}, scene);\n'
@@ -205,7 +223,7 @@ class SlidingRevoluteLinkage(Linkage):
             s += 'linkage_part1_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
             s += 'linkage_part1_mesh.parent = {};\n'.format(part1_parent)
 
-        
+
         if part2_parent is not None:
             s += 'var path2 = [new BABYLON.Vector3({}, {}, {}), new BABYLON.Vector3({}, {}, {})];\n'.format(*(self.part2_position-0.03*self.part2_basis.u),
                                                                                                            *(self.part2_position+0.03*self.part2_basis.u))
@@ -214,7 +232,7 @@ class SlidingRevoluteLinkage(Linkage):
             s += 'linkage_part2_mesh.edgesWidth = 0.4;\n'
             s += 'linkage_part2_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
             s += 'linkage_part2_mesh.parent = {};\n'.format(part2_parent)
-        
+
         return s
 
 class PrismaticLinkage(Linkage):
@@ -240,14 +258,14 @@ class PrismaticLinkage(Linkage):
                          part1, part1_position_f, lambda q: part1_basis,
                          part2, part2_position_f, lambda q: part2_basis,
                          True, False,
-                         1, name)
-        
+                         [Parameter(-1, 1, None)], name)
+
         DessiaObject.__init__(self,
                               part1_position=part1_position,
                               part2_position=part2_position,
                               part1_basis=part1_basis,
                               part2_basis=part2_basis)
-        
+
 
 #    def __init__(self,
 #                 part1, part1_initial_position, part1_axis,
@@ -265,13 +283,13 @@ class PrismaticLinkage(Linkage):
 #                         part2, lambda q: part2_position,
 #                         True, False,
 #                         basis, 1, name)
-#        
+#
 #        DessiaObject.__init__(self,
 #                              part1_axis=part1_axis,
 #                              part2_basis=part2_basis)
-        
+
     def babylonjs(self, initial_linkage_parameters, part1_parent=None, part2_parent=None):
-        
+
         bp1 = self.part1_basis_function(initial_linkage_parameters)
         bp2 = self.part2_basis_function(initial_linkage_parameters)
         s = ''
@@ -283,7 +301,7 @@ class PrismaticLinkage(Linkage):
             s += 'linkage_part1_mesh.enableEdgesRendering();\n'
             s += 'linkage_part1_mesh.edgesWidth = 0.3;\n'
             s += 'linkage_part1_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
-        
+
         if part2_parent is not None:
             s += 'var linkage_part2_mesh = BABYLON.MeshBuilder.CreateBox("prismatic part2", {depth:0.03, height:0.03, width:0.06}, scene);\n'
             s += 'linkage_part2_mesh.parent = {};\n'.format(part2_parent)
@@ -292,12 +310,12 @@ class PrismaticLinkage(Linkage):
             s += 'linkage_part2_mesh.enableEdgesRendering();\n'
             s += 'linkage_part2_mesh.edgesWidth = 0.3;\n'
             s += 'linkage_part2_mesh.edgesColor = new BABYLON.Color4(0, 0, 0, 1);\n'
-            
+
         return s
 
 
 class BallLinkage(Linkage):
-    holonomic = True        
+    holonomic = True
 
     def __init__(self,
                  part1, part1_position, part1_basis,
@@ -320,8 +338,10 @@ class BallLinkage(Linkage):
                          part1, lambda q: part1_position, part1_basis_f,
                          part2, lambda q: part2_position, part2_basis_f,
                          False, True,
-                         3, name)
-        
+                         [Parameter(0., 2*math.pi, 2*math.pi),
+                          Parameter(0., 2*math.pi, 2*math.pi),
+                          Parameter(0., 2*math.pi, 2*math.pi)], name)
+
         DessiaObject.__init__(self,
                               part1_position=part1_position,
                               part2_position=part2_position,
@@ -447,7 +467,7 @@ class MovingMechanism(Mechanism):
             return path
 
     def part_frame(self, part, kinematic_parameters_values):
-        frame = vm.oxyz
+        frame = vm.OXYZ
         for part1, linkage, linkage_side, part2 in self.settings_path(self.ground, part):
             linkage_parameters_values = self.extract_linkage_parameters_values(linkage, kinematic_parameters_values)
             linkage_frame = linkage.frame(linkage_parameters_values, side=linkage_side)
@@ -461,8 +481,8 @@ class MovingMechanism(Mechanism):
                                                         global_parameter_values)
         else:
             ql = []
-            
-        
+
+
         part1_frame = self.part_frame(linkage.part1, global_parameter_values)
         return part1_frame.OldCoordinates(linkage.part1_position_function(ql))
 
@@ -504,53 +524,120 @@ class MovingMechanism(Mechanism):
 
         return residue
 
-    def solve_configurations(self, imposed_parameters):
+    def solve_configurations(self, imposed_parameters,
+                             number_starts=10, max_failed_steps=3,
+                             number_step_retries=10, tol=1e-5):
 
         n_parameters = len(self.kinematic_parameters_mapping.items())
         n_steps = len(list(imposed_parameters.values())[0])
 
-
         def geometric_closing_residue(qr):
             q = basis_vector[:]
-            for qrv, i in zip(qr, free_parameters):
+            
+            for qrv, i in zip(qr, free_parameters_dofs):
+#                print('qrv, i', qrv, i)
                 q[i] = qrv
-
+            
+#            print(q)
             return self.opened_linkages_residue(q)
 
         # Free parameter identification
-        free_parameters = []
+        free_parameters_dofs = []
+        n_free_parameters = 0
+        basis_vector = [0] * n_parameters
         for i in range(n_parameters):
-            if not i in imposed_parameters:
-                free_parameters.append(i)
-
-
-        qs = []
-#        x0 = zeros(len(free_parameters))
-        x0 = npy.random.random(len(free_parameters))
-
-        for istep in range(n_steps):
-
-            basis_vector = [0] * n_parameters
-            for i in range(n_parameters):
-                if i in imposed_parameters:
-                    basis_vector[i] = imposed_parameters[i][istep]
-
-            if len(free_parameters) > 0:
-                result = minimize(geometric_closing_residue, x0)
-                if result.fun < 1e-5:
-                    x0 = result.x
-                    q = basis_vector[:]
-                    for qrv, i in zip(result.x, free_parameters):
-                        q[i] = qrv
-                    qs.append(q)
-                else:
-                    print('@istep {}: residue: {}'.format(istep, result.fun))
-                    print(result)
-            
+            if i in imposed_parameters:
+                basis_vector[i] = imposed_parameters[i][0]
             else:
-                qs.append(basis_vector)
+                free_parameters_dofs.append(i)
+                n_free_parameters += 1
 
-        return MechanismConfigurations(self, qs)
+        
+#        x0 = zeros(len(free_parameters))
+
+        # Starting n times
+        starting_points = []
+        free_parameters = []
+
+        for istart in range(number_starts):
+            x0 = [0]*n_free_parameters
+            bounds = []
+            for (linkage, iparameter), idof in self.kinematic_parameters_mapping.items():
+                if idof in free_parameters_dofs:
+                    parameter = linkage.kinematic_parameters[iparameter]
+                    free_parameters.append(parameter)
+                    x0[free_parameters_dofs.index(idof)] = parameter.random_value()
+                    bounds.append(parameter.optimizer_bounds())
+                    
+                    
+            result = minimize(geometric_closing_residue, x0, bounds=bounds,
+                              tol=0.1*tol)
+#            print(result.x, result.fun)
+            if result.fun < tol:
+                found_x = False
+                for x in starting_points:
+                    equal = True
+                    for parameter, xi1, xi2 in zip(free_parameters, x, result.x):
+                        if not parameter.are_values_equal(xi1, xi2):
+                            equal = False
+                            break
+                    if equal:
+#                        print(x, result.x, 'are equal')
+                        found_x = True
+                        
+                if not found_x:
+                    starting_points.append(result.x)
+
+        print('Found {} starting points'.format(len(starting_points)))
+        print(starting_points)
+
+        configurations = []
+        for starting_point in starting_points:
+            qs = []
+            x0 = starting_point[:]
+            number_failed_steps = 0
+            failed_step = False
+            for istep in range(1, n_steps):
+                
+                basis_vector = [0] * n_parameters
+                for i in range(n_parameters):
+                    if i in imposed_parameters:
+                        basis_vector[i] = imposed_parameters[i][istep]
+#                print('basis_vector', basis_vector)
+                        
+                if n_free_parameters > 0:
+                    step_converged = False
+                    n_tries_step = 1
+                    while (not step_converged) and (n_tries_step<= number_step_retries):
+                        result = minimize(geometric_closing_residue,
+                                          npy.array(x0)+0.01*(npy.random.random(n_free_parameters)-0.5),
+                                          tol=0.1*tol, bounds=bounds)
+                        n_tries_step += 1
+                        step_converged = result.fun < tol
+#                    print('a', result.x, free_parameters_dofs)
+                    if result.fun < tol:
+                        x0 = result.x
+                        q = basis_vector[:]
+#                        print('q1', q)
+                        for qrv, i in zip(result.x, free_parameters_dofs):
+                            q[i] = qrv
+                            
+                        qs.append(q[:])
+                    else:
+                        print('@istep {}: residue: {}'.format(istep, result.fun))
+                        number_failed_steps += 1
+                        if number_failed_steps >= max_failed_steps:
+                            print('Failed {} steps, stopping configuration computation'.format(max_failed_steps))
+                            failed_step = True
+                            break
+                    
+    
+                else:
+                    qs.append(basis_vector)
+            if not failed_step:
+                configurations.append(MechanismConfigurations(self, qs))
+        print('Found {} configurations'.format(len(configurations)))
+        return configurations
 
 
 class MechanismConfigurations(DessiaObject):
@@ -560,21 +647,21 @@ class MechanismConfigurations(DessiaObject):
         DessiaObject.__init__(self,
                               mechanism=mechanism,
                               steps=steps)
-        
+
         self.trajectories = {}
 
     def opened_linkages_residue(self):
         return self.mechanism.opened_linkages_residue(self.kinematic_parameters_values)
-    
+
     def interpolate_step(self, istep):
         """
         :param istep: can be a float
         """
-        
+
         istep1 = int(istep)
         alpha = istep - istep1
-        
-        
+
+
         new_step = [(1-alpha)*s1+alpha*s2 for s1, s2 in zip(self.steps[istep1],
                                                             self.steps[istep1+1])]
         return new_step
@@ -600,16 +687,16 @@ class MechanismConfigurations(DessiaObject):
     def trajectory(self, point, part, reference_part):
         if (point, part, reference_part) in self.trajectories:
             return self.trajectories[point, part, reference_part]
-        
+
         trajectory = []
         for step in self.steps:
             frame1 = self.mechanism.part_frame(part, step)
             frame2 = self.mechanism.part_frame(reference_part, step)
             frame = frame1 - frame2
             trajectory.append(frame.OldCoordinates(point))
-        
+
         self.trajectories[point, part, reference_part] = trajectory
-        
+
         return trajectory
 
     def plot2D_trajectory(self, point, part, reference_part, x=vm.x3D, y=vm.y3D, equal_aspect=True):
@@ -771,7 +858,7 @@ class MechanismConfigurations(DessiaObject):
                 if plot_frames:
                     part_frame = self.mechanism.part_frame(part, step)
                     part_frame.plot2d(x=x, y=y, ax=ax)
-             
+
 
 
         ax.set_aspect('equal')
@@ -781,8 +868,8 @@ class MechanismConfigurations(DessiaObject):
 
     def babylonjs(self, page='gm_babylonjs', plot_frames=False,
                   plot_trajectories=True, use_cdn=False):
-        
-        
+
+
         page+='.html'
 
         env = Environment(loader=PackageLoader('genmechanics', 'templates'),
@@ -828,26 +915,26 @@ class MechanismConfigurations(DessiaObject):
             for l in lines[1:]:
                 meshes_string += l.Babylon(color=colors[part], parent='part_parent')
 #                meshes_string += 'part_meshes.push(line);\n'
-                
+
 #            # Adding interest points
-#            for point in part.interest_points:                
+#            for point in part.interest_points:
 #                meshes_string += 'var point = BABYLON.MeshBuilder.CreateSphere("interest_point", {diameter: 0.01}, scene);\n'
 #                meshes_string += 'point.position = new BABYLON.Vector3({}, {}, {});'.format(*point.vector)
 #                meshes_string += 'part_meshes.push(point);'
 
 
             if plot_frames:
-                meshes_string += vm.oxyz.babylonjs(parent='part_parent', size=0.15)
+                meshes_string += vm.OXYZ.babylonjs(parent='part_parent', size=0.15)
 #                meshes_string += 'part_meshes.push(line1);\n'
 #                meshes_string += 'part_meshes.push(line2);\n'
 #                meshes_string += 'part_meshes.push(line3);\n'
 
 #            meshes_string += 'parts.push(part_meshes);\n'
-            
+
         linkages_string = ''
         for linkage in self.mechanism.linkages:
             if linkage not in self.mechanism.opened_linkages:
-                
+
                 ql = self.mechanism.extract_linkage_parameters_values(linkage,
                                                                       self.steps[0])
             else:
@@ -857,7 +944,7 @@ class MechanismConfigurations(DessiaObject):
                 part1_parent = 'parts_parent[{}]'.format(self.mechanism.parts.index(linkage.part1))
             else:
                 part1_parent = None
-            
+
             if linkage.part2 in self.mechanism.parts:
                 part2_parent = 'parts_parent[{}]'.format(self.mechanism.parts.index(linkage.part2))
             else:
@@ -867,7 +954,7 @@ class MechanismConfigurations(DessiaObject):
                                                  part1_parent=part1_parent,
                                                  part2_parent=part2_parent)
 
-            
+
         # Computing positions and orientations
         positions = []
         orientations = []
@@ -894,7 +981,7 @@ class MechanismConfigurations(DessiaObject):
             positions.append(step_positions)
             orientations.append(step_orientations)
             linkage_positions.append(step_linkage_positions)
-            
+
         trajectories = []
         if plot_trajectories:
             for trajectory in self.trajectories.values():
@@ -902,7 +989,7 @@ class MechanismConfigurations(DessiaObject):
 #            for point, part in self.mechanism.parts:
 #                for point in part.interest_points:
 #                    trajectories.append([list(p.vector) for p in self.trajectory(point, part, self.mechanism.ground)])
-                    
+
 
         script = template.render(center=(0, 0, 0),
                                  length=2*0.5,
