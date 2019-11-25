@@ -1,0 +1,29 @@
+---
+kind: pipeline
+type: docker
+name: default
+
+steps:
+- name: install, build doc run scripts
+  image: python:3.7
+  commands:
+  - git fetch --tags 
+  - python setup.py install
+  - pip install sphinx sphinx_rtd_theme
+  - cd doc
+  - make html
+  - cd ../scripts
+  - python torque_verification.py
+  - python mac_pherson.py
+  - python unidimensional/double_ball_bearings.py
+
+- name: develop
+  image: python:3.7
+  commands:
+  - python setup.py develop
+
+- name: sdist
+  image: python:3.7
+  commands:
+  - python setup.py sdist --formats=gztar,zip
+
