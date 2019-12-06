@@ -26,7 +26,7 @@ class ModelError(Exception):
     def __str__(self):
         return 'Model Error: ' + self.message
 
-class Part:
+class Part(DessiaObject):
     def __init__(self, name='', interest_points=None):
         if interest_points is None:
             self.interest_points = []
@@ -45,7 +45,7 @@ class Part:
             full_graph.add_nodes_from(points)
             points.append(vm.Point3D.mean_point(points))
             for point1, point2 in combinations(points, 2):
-                full_graph.add_edge(point1, point2, weight=point1.PointDistance(point2))
+                full_graph.add_edge(point1, point2, weight=point1.point_distance(point2))
             
             wireframe_graph = nx.minimum_spanning_tree(full_graph)
             for point1, point2 in wireframe_graph.edges():
@@ -825,7 +825,7 @@ class Mechanism:
 
         for load in self.known_static_loads+self.unknown_static_loads:
             pl=self.LoadPower(load)
-            print(pl)
+#            print(pl)
             flows.append(pl)
             labels.append(load.name)
             if (load.__class__.__name__=='SimpleUnknownLoad')|(load.__class__.__name__=='KnownLoad'):
@@ -909,7 +909,7 @@ class Mechanism:
                 max_force=max(max_force,max(f))
                 max_torque=max(max_torque,max(t))
 
-            print(max_force,max_torque)
+#            print(max_force,max_torque)
 
 
         linkages_strings=[]

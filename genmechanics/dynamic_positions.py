@@ -10,6 +10,7 @@ import webbrowser
 import math
 import random
 import numpy as npy
+import cma
 
 from matplotlib.colors import hsv_to_rgb
 import matplotlib.pyplot as plt
@@ -36,7 +37,7 @@ class Parameter(DessiaObject):
     def random_value(self):
         return random.uniform(self.lower_bound, self.upper_bound)
     
-    def are_values_equal(self, value1, value2, tol=1e-2):
+    def are_values_equal(self, value1, value2, tol=1e-3):
         if self.periodicity is not None:
             value1 = value1 % self.periodicity
             value2 = value2 % self.periodicity
@@ -48,6 +49,8 @@ class Parameter(DessiaObject):
         if self.periodicity is not None:
             return (self.lower_bound-0.5*self.periodicity,
                     self.upper_bound+0.5*self.periodicity)
+        else:
+            return (self.lower_bound, self.upper_bound)
         
 
 class Linkage(DessiaObject):
@@ -119,7 +122,7 @@ class RevoluteLinkage(Linkage):
 
     def __init__(self,
                  part1, part1_position, part1_basis,
-                 part2, part2_position, part2_basis, name=''):
+                 part2, part2_position, part2_basis, name='RevoluteLinkage'):
         """
         :param part2_basis: a basis defining orientation of linkage on part2
 
@@ -131,18 +134,19 @@ class RevoluteLinkage(Linkage):
         def part2_basis_f(q):
             return part2_basis
 
-
-        Linkage.__init__(self,
-                         part1, lambda q: part1_position, part1_basis_f,
-                         part2, lambda q: part2_position, part2_basis_f,
-                         False, True,
-                         [Parameter(0., 2*math.pi, 2*math.pi)], name)
-
         DessiaObject.__init__(self,
                               part1_position=part1_position,
                               part2_position=part2_position,
                               part1_basis=part1_basis,
                               part2_basis=part2_basis)
+        
+        Linkage.__init__(self,
+                         part1, lambda q: part1_position, part1_basis_f,
+                         part2, lambda q: part2_position, part2_basis_f,
+                         False, True,
+                         [Parameter(0., 2*math.pi, 2*math.pi)], name=name)
+
+
 
 
 
@@ -177,7 +181,7 @@ class SlidingRevoluteLinkage(Linkage):
 
     def __init__(self,
                  part1, part1_position, part1_basis,
-                 part2, part2_position, part2_basis, name=''):
+                 part2, part2_position, part2_basis, name='SlidingRevoluteLinkage'):
         """
         :param part2_basis: a basis defining orientation of linkage on part2
         The first kineamtic parameter is the translation, the second the rotation
@@ -192,6 +196,12 @@ class SlidingRevoluteLinkage(Linkage):
         def part1_basis_f(q):
             return part1_basis.Rotation(part1_basis.u, q[1], copy=True)
 
+        DessiaObject.__init__(self,
+                              part1_position=part1_position,
+                              part2_position=part2_position,
+                              part1_basis=part1_basis,
+                              part2_basis=part2_basis)
+
         Linkage.__init__(self,
                          part1, part1_position_f, part1_basis_f,
                          part2, part2_position_f, lambda q: part2_basis,
@@ -199,11 +209,7 @@ class SlidingRevoluteLinkage(Linkage):
                          [Parameter(0., 2*math.pi, 2*math.pi),
                           Parameter(-1., 1., None)], name)
 
-        DessiaObject.__init__(self,
-                              part1_position=part1_position,
-                              part2_position=part2_position,
-                              part1_basis=part1_basis,
-                              part2_basis=part2_basis)
+
 
     def babylonjs(self, initial_linkage_parameters,
                   part1_parent=None, part2_parent=None):
@@ -241,7 +247,7 @@ class PrismaticLinkage(Linkage):
 
     def __init__(self,
                  part1, part1_position, part1_basis,
-                 part2, part2_position, part2_basis, name=''):
+                 part2, part2_position, part2_basis, name='PrismaticLinkage'):
         """
         :param part2_basis: a basis defining orientation of linkage on part2
 
@@ -252,7 +258,12 @@ class PrismaticLinkage(Linkage):
 
         def part2_position_f(q):
             return part2_position
-
+        
+        DessiaObject.__init__(self,
+                              part1_position=part1_position,
+                              part2_position=part2_position,
+                              part1_basis=part1_basis,
+                              part2_basis=part2_basis)
 
         Linkage.__init__(self,
                          part1, part1_position_f, lambda q: part1_basis,
@@ -260,11 +271,7 @@ class PrismaticLinkage(Linkage):
                          True, False,
                          [Parameter(-1, 1, None)], name)
 
-        DessiaObject.__init__(self,
-                              part1_position=part1_position,
-                              part2_position=part2_position,
-                              part1_basis=part1_basis,
-                              part2_basis=part2_basis)
+
 
 
 #    def __init__(self,
@@ -320,7 +327,7 @@ class BallLinkage(Linkage):
     def __init__(self,
                  part1, part1_position, part1_basis,
                  part2, part2_position, part2_basis,
-                 name=''):
+                 name='BallLinkage'):
         """
 
         """
@@ -334,6 +341,12 @@ class BallLinkage(Linkage):
             return part2_basis
 
 
+        DessiaObject.__init__(self,
+                              part1_position=part1_position,
+                              part2_position=part2_position,
+                              part1_basis=part1_basis,
+                              part2_basis=part2_basis)
+
         Linkage.__init__(self,
                          part1, lambda q: part1_position, part1_basis_f,
                          part2, lambda q: part2_position, part2_basis_f,
@@ -342,15 +355,10 @@ class BallLinkage(Linkage):
                           Parameter(0., 2*math.pi, 2*math.pi),
                           Parameter(0., 2*math.pi, 2*math.pi)], name)
 
-        DessiaObject.__init__(self,
-                              part1_position=part1_position,
-                              part2_position=part2_position,
-                              part1_basis=part1_basis,
-                              part2_basis=part2_basis)
 
 
 class MovingMechanism(Mechanism):
-    def __init__(self, linkages, ground, name):
+    def __init__(self, linkages, ground, name=''):
 
         Mechanism.__init__(self,
                            linkages,
@@ -358,7 +366,7 @@ class MovingMechanism(Mechanism):
                            {},
                            None,
                            None,
-                           name='')
+                           name=name)
 
         self.parts_setting_path = {}
         self._settings_path = {}
@@ -531,6 +539,7 @@ class MovingMechanism(Mechanism):
         n_parameters = len(self.kinematic_parameters_mapping.items())
         n_steps = len(list(imposed_parameters.values())[0])
 
+
         def geometric_closing_residue(qr):
             q = basis_vector[:]
             
@@ -569,15 +578,31 @@ class MovingMechanism(Mechanism):
                     x0[free_parameters_dofs.index(idof)] = parameter.random_value()
                     bounds.append(parameter.optimizer_bounds())
                     
-                    
-            result = minimize(geometric_closing_residue, x0, bounds=bounds,
-                              tol=0.1*tol)
-#            print(result.x, result.fun)
-            if result.fun < tol:
+#            result = minimize(geometric_closing_residue, x0, bounds=bounds,
+#                              tol=0.1*tol)
+            
+            bounds_cma = [[], []]
+            for bmin, bmax in bounds:
+               bounds_cma[0].append(bmin) 
+               bounds_cma[1].append(bmax) 
+#            print('x0', x0, bounds)
+            xopt, fopt = cma.fmin(geometric_closing_residue, x0, 0.2,
+                                  options={'bounds':bounds_cma,
+                                           'ftarget': tol,
+                                           'verbose': -9,
+                                           'maxiter': 2000})[0:2]
+        
+#            print('f_opt', fopt)
+#            print('x_opt', xopt, len(xopt))
+#            print('geometric_closing_residue(xopt)', geometric_closing_residue(xopt))
+#            print('basis vector', basis_vector)
+#            if result.fun < tol:
+            if fopt <= tol:
+#                print('converged')
                 found_x = False
                 for x in starting_points:
                     equal = True
-                    for parameter, xi1, xi2 in zip(free_parameters, x, result.x):
+                    for parameter, xi1, xi2 in zip(free_parameters, x, xopt):
                         if not parameter.are_values_equal(xi1, xi2):
                             equal = False
                             break
@@ -586,15 +611,34 @@ class MovingMechanism(Mechanism):
                         found_x = True
                         
                 if not found_x:
-                    starting_points.append(result.x)
+                    starting_points.append(xopt[:])
 
         print('Found {} starting points'.format(len(starting_points)))
-        print(starting_points)
+        
+#        print(starting_points)
 
         configurations = []
-        for starting_point in starting_points:
-            qs = []
+        for isp, starting_point in enumerate(starting_points):
+            print('starting_point {}/{}'.format(isp+1, len(starting_points)))
+            # Resetting basis vector
+            basis_vector = [0.] * n_parameters
+            for iparameter, values in imposed_parameters.items():
+                basis_vector[iparameter] = values[0]
+                
+#            print('basis vector2', basis_vector, len(basis_vector), n_parameters)
+            
             x0 = starting_point[:]
+            q = basis_vector[:]
+            for qrv, i in zip(x0, free_parameters_dofs):
+                q[i] = qrv
+            qs = [q]
+#            print('q', q)
+            
+#            test = MechanismConfigurations(self, [q[:]])
+#            print(test.opened_linkages_residue())
+#            print(len(q), q)
+#            test.babylonjs()
+            
             number_failed_steps = 0
             failed_step = False
             for istep in range(1, n_steps):
@@ -612,19 +656,26 @@ class MovingMechanism(Mechanism):
                         result = minimize(geometric_closing_residue,
                                           npy.array(x0)+0.01*(npy.random.random(n_free_parameters)-0.5),
                                           tol=0.1*tol, bounds=bounds)
+                        xopt = result.x
+                        fopt = result.fun
+#                        xopt, fopt = cma.fmin(geometric_closing_residue, x0, 0.1,options={'bounds':bounds_cma,
+##                                              'tolfun':0.5*tol,
+#                                              'verbose':-9,
+#                                              'ftarget': tol,
+#                                              'maxiter': 500})[0:2]
                         n_tries_step += 1
-                        step_converged = result.fun < tol
+                        step_converged = fopt < tol
 #                    print('a', result.x, free_parameters_dofs)
-                    if result.fun < tol:
-                        x0 = result.x
+                    if step_converged:
+                        x0 = xopt[:]
                         q = basis_vector[:]
 #                        print('q1', q)
-                        for qrv, i in zip(result.x, free_parameters_dofs):
+                        for qrv, i in zip(xopt, free_parameters_dofs):
                             q[i] = qrv
                             
                         qs.append(q[:])
                     else:
-                        print('@istep {}: residue: {}'.format(istep, result.fun))
+                        print('@istep {}: residue: {}'.format(istep, fopt))
                         number_failed_steps += 1
                         if number_failed_steps >= max_failed_steps:
                             print('Failed {} steps, stopping configuration computation'.format(max_failed_steps))
@@ -639,6 +690,23 @@ class MovingMechanism(Mechanism):
         print('Found {} configurations'.format(len(configurations)))
         return configurations
 
+def istep_from_value_on_trajectory(trajectory, value, axis):
+    for ipoint, (point1, point2) in enumerate(zip(trajectory[:-1],
+                                                  trajectory[1:])):
+        if (point1[axis] > value) and (point2[axis] <= value):
+            alpha = (point2[2]- value)/(point2[2]-point1[2])
+            return ipoint + alpha
+    return None
+
+def trajectory_point_from_value(trajectory, value, axis):
+    for ipoint, (point1, point2) in enumerate(zip(trajectory[:-1],
+                                                  trajectory[1:])):
+        if (point1[axis] > value) and (point2[axis] <= value):
+            alpha = (point2[2]- value)/(point2[2]-point1[2])
+            
+            return alpha*point1 + (1-alpha)*point2
+    return None
+        
 
 class MechanismConfigurations(DessiaObject):
 
@@ -651,7 +719,10 @@ class MechanismConfigurations(DessiaObject):
         self.trajectories = {}
 
     def opened_linkages_residue(self):
-        return self.mechanism.opened_linkages_residue(self.kinematic_parameters_values)
+        residues = []
+        for step in self.steps:
+            residues.append(self.mechanism.opened_linkages_residue(step))
+        return residues
 
     def interpolate_step(self, istep):
         """

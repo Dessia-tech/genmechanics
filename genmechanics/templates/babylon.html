@@ -224,8 +224,6 @@ var createScene = function () {
     // Parts position update
     step_number_label.text = "Step n°"+(istep+1)+"/"+n_steps;
     for(let ipart=0; ipart<n_parts; ipart++){
-    // for (let mesh of parts_parent){
-        // for(let mesh of parts[ipart]){
         mesh = parts_parent[ipart];
         mesh.position = new BABYLON.Vector3(positions[istep][ipart][0],
                                             positions[istep][ipart][1],
@@ -240,20 +238,8 @@ var createScene = function () {
           new BABYLON.Vector3(orientations[istep][ipart][2][0],
                               orientations[istep][ipart][2][1],
                               orientations[istep][ipart][2][2]));
-      // }
     }
 
-  //   // Linkages position update
-  //   for(let ilinkage=0; ilinkage<n_linkages; ilinkage++){
-  //       // for(let mesh of linkage_meshes[ilinkage]){
-  //         let mesh = linkage_meshes[ilinkage];
-  //         // console.log(ilinkage)
-  //         mesh.position = new BABYLON.Vector3(linkage_positions[istep][ilinkage][0],
-  //                                             linkage_positions[istep][ilinkage][1],
-  //                                             linkage_positions[istep][ilinkage][2]);
-  //
-  //     // }
-  //   }
   }
 
   var iframe = 0;
