@@ -521,38 +521,31 @@ class MovingMechanism(Mechanism):
         residue = 0.
         for linkage in self.opened_linkages:
             residue += self.opened_linkage_gap(linkage, q).Norm()
-#            misalignment_basis = self.opened_linkage_misalignment(linkage, q)
-##            print('mb', misalignment_basis)
-#            residue += (misalignment_basis.u - vm.x3D).Norm()
-#            residue += (misalignment_basis.v - vm.y3D).Norm()
-#            residue += (misalignment_basis.w - vm.z3D).Norm()
-
-#        print(residue)
-#            print(misalignment_basis.u.Norm()+misalignment_basis.v.Norm()+misalignment_basis.w.Norm())
-
         return residue
-
-    def solve_configurations(self, imposed_parameters,
-                             number_starts=10, max_failed_steps=3,
-                             number_step_retries=10, tol=1e-5):
-
-        n_parameters = len(self.kinematic_parameters_mapping.items())
-        n_steps = len(list(imposed_parameters.values())[0])
-
-
-        def geometric_closing_residue(qr):
+    
+    def geometric_closing_residue_function(self, basis_vector,
+                                           free_parameters_dofs):
+        
+        
+        def residue_function(xr, basis_vector):
             q = basis_vector[:]
-            
-            for qrv, i in zip(qr, free_parameters_dofs):
-#                print('qrv, i', qrv, i)
+
+            for qrv, i in zip(xr, free_parameters_dofs):
                 q[i] = qrv
             
-#            print(q)
+        
             return self.opened_linkages_residue(q)
+        
+        return residue_function
 
+    
+    def _optimization_settings(self, imposed_parameters):
+        
         # Free parameter identification
         free_parameters_dofs = []
+        free_parameters = []
         n_free_parameters = 0
+        n_parameters = len(self.kinematic_parameters_mapping.items())
         basis_vector = [0] * n_parameters
         for i in range(n_parameters):
             if i in imposed_parameters:
@@ -560,32 +553,51 @@ class MovingMechanism(Mechanism):
             else:
                 free_parameters_dofs.append(i)
                 n_free_parameters += 1
-
-        
-#        x0 = zeros(len(free_parameters))
-
-        # Starting n times
-        starting_points = []
-        free_parameters = []
-
-        for istart in range(number_starts):
-            x0 = [0]*n_free_parameters
-            bounds = []
-            for (linkage, iparameter), idof in self.kinematic_parameters_mapping.items():
-                if idof in free_parameters_dofs:
-                    parameter = linkage.kinematic_parameters[iparameter]
-                    free_parameters.append(parameter)
-                    x0[free_parameters_dofs.index(idof)] = parameter.random_value()
-                    bounds.append(parameter.optimizer_bounds())
-                    
-#            result = minimize(geometric_closing_residue, x0, bounds=bounds,
-#                              tol=0.1*tol)
+                
+        bounds = []
+        for (linkage, iparameter), idof in self.kinematic_parameters_mapping.items():
+            if idof in free_parameters_dofs:
+                parameter = linkage.kinematic_parameters[iparameter]
+                free_parameters.append(parameter)
+                bounds.append(parameter.optimizer_bounds())
             
             bounds_cma = [[], []]
             for bmin, bmax in bounds:
                bounds_cma[0].append(bmin) 
                bounds_cma[1].append(bmax) 
+                
+        return basis_vector, free_parameters_dofs, free_parameters, n_free_parameters, bounds, bounds_cma
+        
+    
+    def find_initial_configurations(self, steps_imposed_parameters,
+                             number_starts=10, max_failed_steps=3,
+                             number_step_retries=10, tol=1e-5):
+
+        initial_imposed_parameters = {k: v[0] for k,v in steps_imposed_parameters.items()}
+
+
+
+        basis_vector, free_parameters_dofs, free_parameters, n_free_parameters, bounds, bounds_cma\
+            = self._optimization_settings(initial_imposed_parameters.keys())
+
+        geometric_closing_residue = self.geometric_closing_residue_function(basis_vector,
+                                                                            free_parameters_dofs)
+
+
+        # Starting n times
+        starting_points = []
+
+
+        for istart in range(number_starts):
+            x0 = [0]*n_free_parameters
+            for i, parameter in zip(free_parameters_dofs, free_parameters):
+                x0[i] = parameter.random_value()
+
+#            result = minimize(geometric_closing_residue, x0, bounds=bounds,
+#                              tol=0.1*tol)
 #            print('x0', x0, bounds)
+                
+                
             xopt, fopt = cma.fmin(geometric_closing_residue, x0, 0.2,
                                   options={'bounds':bounds_cma,
                                            'ftarget': tol,
@@ -615,80 +627,87 @@ class MovingMechanism(Mechanism):
 
         print('Found {} starting points'.format(len(starting_points)))
         
+        return starting_points
+        
 #        print(starting_points)
+    def solve_from_initial_configuration(self, initial_parameter_values,
+                                         steps_imposed_parameters,
+                                         ):
 
-        configurations = []
-        for isp, starting_point in enumerate(starting_points):
-            print('starting_point {}/{}'.format(isp+1, len(starting_points)))
-            # Resetting basis vector
-            basis_vector = [0.] * n_parameters
-            for iparameter, values in imposed_parameters.items():
-                basis_vector[iparameter] = values[0]
-                
-#            print('basis vector2', basis_vector, len(basis_vector), n_parameters)
-            
-            x0 = starting_point[:]
-            q = basis_vector[:]
-            for qrv, i in zip(x0, free_parameters_dofs):
-                q[i] = qrv
-            qs = [q]
+#        configurations = []
+#        for isp, starting_point in enumerate(starting_points):
+#            print('starting_point {}/{}'.format(isp+1, len(starting_points)))
+        # Resetting basis vector
+#        basis_vector = [0.] * n_parameters
+#        for iparameter, values in imposed_parameters.items():
+#            basis_vector[iparameter] = values[0]
+#            
+##            print('basis vector2', basis_vector, len(basis_vector), n_parameters)
+#        
+#        x0 = starting_point[:]
+#        q = basis_vector[:]
+#        for qrv, i in zip(x0, free_parameters_dofs):
+#            q[i] = qrv
+#        qs = [q]
 #            print('q', q)
-            
+        
 #            test = MechanismConfigurations(self, [q[:]])
 #            print(test.opened_linkages_residue())
 #            print(len(q), q)
 #            test.babylonjs()
-            
-            number_failed_steps = 0
-            failed_step = False
-            for istep in range(1, n_steps):
+        
+        n_steps = len(list(imposed_parameters.values())[0])
+        
+        number_failed_steps = 0
+        failed_step = False
+        for istep in range(1, n_steps):
+            step_imposed_parameters = {k: v[istep] for k, v in steps_imposed_parameters.items()}
+
+            # basis vector needs update at each time step!
+            basis_vector, free_parameters_dofs, free_parameters, n_free_parameters, bounds, bounds_cma\
+                = self._optimization_settings(step_imposed_parameters.keys())
                 
-                basis_vector = [0] * n_parameters
-                for i in range(n_parameters):
-                    if i in imposed_parameters:
-                        basis_vector[i] = imposed_parameters[i][istep]
-#                print('basis_vector', basis_vector)
+            geometric_closing_residue = self.geometric_closing_residue_function(basis_vector,
+                                                                                free_parameters_dofs)
                         
-                if n_free_parameters > 0:
-                    step_converged = False
-                    n_tries_step = 1
-                    while (not step_converged) and (n_tries_step<= number_step_retries):
-                        result = minimize(geometric_closing_residue,
-                                          npy.array(x0)+0.01*(npy.random.random(n_free_parameters)-0.5),
-                                          tol=0.1*tol, bounds=bounds)
-                        xopt = result.x
-                        fopt = result.fun
-#                        xopt, fopt = cma.fmin(geometric_closing_residue, x0, 0.1,options={'bounds':bounds_cma,
-##                                              'tolfun':0.5*tol,
-#                                              'verbose':-9,
-#                                              'ftarget': tol,
-#                                              'maxiter': 500})[0:2]
-                        n_tries_step += 1
-                        step_converged = fopt < tol
+            if n_free_parameters > 0:
+                step_converged = False
+                n_tries_step = 1
+                while (not step_converged) and (n_tries_step<= number_step_retries):
+#                        result = minimize(geometric_closing_residue,
+#                                          npy.array(x0)+0.01*(npy.random.random(n_free_parameters)-0.5),
+#                                          tol=0.1*tol, bounds=bounds)
+#                        xopt = result.x
+#                        fopt = result.fun
+                    xopt, fopt = cma.fmin(geometric_closing_residue, x0, 0.1,options={'bounds':bounds_cma,
+#                                              'tolfun':0.5*tol,
+                                          'verbose':-9,
+                                          'ftarget': tol,
+                                          'maxiter': 500})[0:2]
+                    n_tries_step += 1
+                    step_converged = fopt < tol
 #                    print('a', result.x, free_parameters_dofs)
-                    if step_converged:
-                        x0 = xopt[:]
-                        q = basis_vector[:]
+                if step_converged:
+                    x0 = xopt[:]
+                    q = basis_vector[:]
 #                        print('q1', q)
-                        for qrv, i in zip(xopt, free_parameters_dofs):
-                            q[i] = qrv
-                            
-                        qs.append(q[:])
-                    else:
-                        print('@istep {}: residue: {}'.format(istep, fopt))
-                        number_failed_steps += 1
-                        if number_failed_steps >= max_failed_steps:
-                            print('Failed {} steps, stopping configuration computation'.format(max_failed_steps))
-                            failed_step = True
-                            break
-                    
-    
+                    for qrv, i in zip(xopt, free_parameters_dofs):
+                        q[i] = qrv
+                        
+                    qs.append(q[:])
                 else:
-                    qs.append(basis_vector)
-            if not failed_step:
-                configurations.append(MechanismConfigurations(self, qs))
-        print('Found {} configurations'.format(len(configurations)))
-        return configurations
+                    print('@istep {}: residue: {}'.format(istep, fopt))
+                    number_failed_steps += 1
+                    if number_failed_steps >= max_failed_steps:
+                        print('Failed {} steps, stopping configuration computation'.format(max_failed_steps))
+                        failed_step = True
+                        break
+                
+
+            else:
+                qs.append(basis_vector)
+        if not failed_step:
+            return MechanismConfigurations(self, qs)
 
 def istep_from_value_on_trajectory(trajectory, value, axis):
     for ipoint, (point1, point2) in enumerate(zip(trajectory[:-1],
