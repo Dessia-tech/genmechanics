@@ -514,7 +514,7 @@ class MovingMechanism(Mechanism):
 
         basis1 = self.part_frame(linkage.part1, global_parameter_values).Basis()
         basis2 = self.part_frame(linkage.part2, global_parameter_values).Basis()
-        basis = basis2 - basis1 - linkage.basis(ql)# !!!!!
+        basis = basis2 - basis1 - linkage.basis(ql)
         return basis
 
     def opened_linkages_residue(self, q):
@@ -575,16 +575,16 @@ class MovingMechanism(Mechanism):
         return basis_vector, free_parameters_dofs, free_parameters, n_free_parameters, bounds, bounds_cma
         
     
-    def find_initial_configurations(self, steps_imposed_parameters,
-                                    number_max_configurations,
-                                    number_starts=10, tol=1e-5):
+    def find_configurations(self, imposed_parameters,
+                           number_max_configurations,
+                           number_starts=10, tol=1e-5,
+                           starting_point=None):
 
-        initial_imposed_parameters = {k: v[0] for k,v in steps_imposed_parameters.items()}
-
+        # initial_imposed_parameters = {k: v[0] for k,v in steps_imposed_parameters.items()}
 
 
         basis_vector, free_parameters_dofs, free_parameters, n_free_parameters, bounds, bounds_cma\
-            = self._optimization_settings(initial_imposed_parameters)
+            = self._optimization_settings(imposed_parameters)
 
         geometric_closing_residue = self.geometric_closing_residue_function(basis_vector,
                                                                             free_parameters_dofs)
@@ -593,11 +593,13 @@ class MovingMechanism(Mechanism):
         # Starting n times
         starting_points = []
 
-#        print(free_parameters_dofs, len(free_parameters))
         for istart in range(number_starts):
-            xr0 = [0]*n_free_parameters
-            for i, parameter in enumerate(free_parameters):
-                xr0[i] = parameter.random_value()
+            if starting_point is None:
+                xr0 = [0]*n_free_parameters
+                for i, parameter in enumerate(free_parameters):
+                    xr0[i] = parameter.random_value()
+            else:
+                xr0 = [starting_point[i] for i in free_parameters_dofs]
 
 #            result = minimize(geometric_closing_residue, x0, bounds=bounds,
 #                              tol=0.1*tol)
@@ -610,11 +612,7 @@ class MovingMechanism(Mechanism):
                                            'verbose': -9,
                                            'maxiter': 2000})[0:2]
         
-#            print('f_opt', fopt)
-#            print('x_opt', xopt, len(xopt))
-#            print('geometric_closing_residue(xopt)', geometric_closing_residue(xopt))
-#            print('basis vector', basis_vector)
-#            if result.fun < tol:
+
             if fopt <= tol:
 #                print('converged')
                 found_x = False
@@ -632,8 +630,10 @@ class MovingMechanism(Mechanism):
                     xopt = self.reduced_x_to_full_x(xr_opt, basis_vector, free_parameters_dofs)
                     starting_points.append(xopt[:])
                     yield xopt
+                    if len(starting_points) >= number_max_configurations:
+                        break
 
-        print('Found {} starting points'.format(len(starting_points)))
+        print('Found {} coniguration'.format(len(starting_points)))
         
 
     def solve_from_initial_configuration(self, initial_parameter_values,
