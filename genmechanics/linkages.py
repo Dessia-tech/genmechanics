@@ -215,7 +215,7 @@ class BallLinkage(HolonomicLinkage):
         self.Cw=Cw
         self.static_behavior_nonlinear_eq=[lambda x,w,v:abs(w[0])/w[0]*(Ca*abs(x[0])+Cr*(x[1]**2+x[2]**2)**0.5+Cw*w[0])+x[3] if w[0]!=0 else x[3]]
             
-            
+    
 
 class LinearAnnularLinkage(HolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,Cr,Cw,name='Linear Annular Linkage'):

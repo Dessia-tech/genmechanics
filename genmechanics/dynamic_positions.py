@@ -320,6 +320,38 @@ class PrismaticLinkage(Linkage):
 
         return s
 
+class LimitedBallLinkage(Linkage):
+    holonomic = True
+
+    def __init__(self,
+                 part1, part1_position, part1_basis,
+                 part2, part2_position, part2_basis,
+                 name='LimitedBallLinkage'):
+        """
+
+        """
+
+        def part1_basis_f(q):
+            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)\
+                              .Rotation(part1_basis.v, q[1], copy=True)
+
+        def part2_basis_f(q):
+            return part2_basis
+
+
+        DessiaObject.__init__(self,
+                              part1_position=part1_position,
+                              part2_position=part2_position,
+                              part1_basis=part1_basis,
+                              part2_basis=part2_basis)
+
+        Linkage.__init__(self,
+                         part1, lambda q: part1_position, part1_basis_f,
+                         part2, lambda q: part2_position, part2_basis_f,
+                         False, True,
+                         [Parameter(0., 2*math.pi, 2*math.pi),
+                          Parameter(0., 2*math.pi, 2*math.pi)],
+                         name)
 
 class BallLinkage(Linkage):
     holonomic = True
@@ -722,7 +754,7 @@ def istep_from_value_on_trajectory(trajectory, value, axis):
                                                   trajectory[1:])):
         interval = sorted((point1[axis], point2[axis]))
         if (interval[0] <= value) and (value < interval[1]):
-            alpha = (point2[axis]- value)/(point2[axis]-point1[axis])
+            alpha = (value-point1[axis])/(point2[axis]-point1[axis])
             return ipoint + alpha
     raise ValueError
 
