@@ -720,10 +720,22 @@ class MovingMechanism(Mechanism):
 def istep_from_value_on_trajectory(trajectory, value, axis):
     for ipoint, (point1, point2) in enumerate(zip(trajectory[:-1],
                                                   trajectory[1:])):
-        if (point1[axis] > value) and (point2[axis] <= value):
-            alpha = (point2[2]- value)/(point2[2]-point1[2])
+        interval = sorted((point1[axis], point2[axis]))
+        if (interval[0] <= value) and (value < interval[1]):
+            alpha = (point2[axis]- value)/(point2[axis]-point1[axis])
             return ipoint + alpha
-    return None
+    raise ValueError
+
+def point_from_istep_on_trajectory(trajectory, istep):
+    istep1 = int(istep)
+    if istep1 == istep:
+        # No interpolation needed
+        return trajectory[istep]
+    else:
+        alpha = istep - istep1
+        point1 = trajectory[istep1]
+        point2 = trajectory[istep1+1]
+        return alpha*point1+(1-alpha)*point2
 
 def trajectory_point_from_value(trajectory, value, axis):
     for ipoint, (point1, point2) in enumerate(zip(trajectory[:-1],
