@@ -665,7 +665,7 @@ class MovingMechanism(Mechanism):
                     if len(starting_points) >= number_max_configurations:
                         break
 
-        print('Found {} coniguration'.format(len(starting_points)))
+        print('Found {} configurations'.format(len(starting_points)))
         
 
     def solve_from_initial_configuration(self, initial_parameter_values,
