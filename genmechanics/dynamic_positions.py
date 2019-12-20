@@ -53,7 +53,7 @@ class Parameter(DessiaObject):
             return (self.lower_bound, self.upper_bound)
         
 
-class Linkage:
+class Linkage(DessiaObject):
     def __init__(self,
                  part1, part1_position_function, part1_basis_function,
                  part2, part2_position_function, part2_basis_function,
@@ -734,7 +734,7 @@ class MovingMechanism(Mechanism):
             else:
                 qs.append(basis_vector)
         if not failed_step:
-            return MechanismConfigurations(self, qs)
+            return MechanismConfigurations(self, steps_imposed_parameters, qs)
 
 #    def solve_configurations(steps_imposed_parameters,
 #                             number_max_configurations)
@@ -756,6 +756,8 @@ def istep_from_value_on_trajectory(trajectory, value, axis):
         if (interval[0] <= value) and (value < interval[1]):
             alpha = (value-point1[axis])/(point2[axis]-point1[axis])
             # print('alpha', alpha)
+            if alpha < 0 or alpha > 1: 
+                raise ValueError
             return ipoint + alpha
     raise ValueError
 
@@ -783,15 +785,36 @@ def trajectory_point_from_value(trajectory, value, axis):
             return (1-alpha)*point1 + alpha*point2
     return None
         
+def trajectory_derivative(trajectory, istep, delta_istep):
+    istep1 = istep-0.5*delta_istep
+    istep2 = istep+0.5*delta_istep
+    if istep1 < 0:
+        istep1 = 0
+        istep2 = delta_istep
+    if istep2 > len(trajectory)-1:
+        istep2 = len(trajectory)-1
+        istep1 = istep2 - delta_istep
+        if istep1 < 0:
+            print(istep1, istep2)
+            raise ValueError('Delta istep is too large!')
+    print(istep2, len(trajectory)-1)
+    point1 = point_from_istep_on_trajectory(trajectory, istep1)
+    point2 = point_from_istep_on_trajectory(trajectory, istep2)
+    print('tt', istep1, istep2, point1, point2)
+    return (point2-point1)
 
 class MechanismConfigurations(DessiaObject):
 
-    def __init__(self, mechanism, steps):
+    def __init__(self,
+                 mechanism,
+                 steps_imposed_parameters,
+                 steps):
         
 
 
         DessiaObject.__init__(self,
                               mechanism=mechanism,
+                              steps_imposed_parameters=steps_imposed_parameters,
                               steps=steps)
         
         if not self.is_valid():
@@ -904,6 +927,52 @@ class MechanismConfigurations(DessiaObject):
             ax.set_aspect('equal')
 #        fig.canvas.set_window_title('Trajectory')
         return fig, ax
+    
+    def part_point_speed(self, part, global_point, istep):
+        """
+        
+        """
+        frame1 = self.mechanism.part_frame(part, self.steps[istep])
+        frame2 = self.mechanism.part_frame(part, self.steps[istep+1])
+
+        p1 = frame1.NewCoordinates(global_point)
+        p2 = frame2.NewCoordinates(global_point)
+        return p2 - p1
+    
+    def part_local_rotation_vector(self, part, istep):
+        # rotation_vectors = []
+        
+        frame1 = self.mechanism.part_frame(part, self.steps[istep])
+        frame2 = self.mechanism.part_frame(part, self.steps[istep+1])
+        
+        point1 = frame1.OldCoordinates(vm.Y3D)
+        point2 = frame2.OldCoordinates(vm.Z3D)
+
+        point1_speed = self.part_point_speed(part, point1, istep)
+        point2_speed = self.part_point_speed(part, point2, istep)
+        origin_speed = self.part_point_speed(part, vm.O3D, istep)
+        print('v', part.name, point1_speed, point2_speed)
+        # for p1s, p2s, origin_s in zip(point1_speeds, point2_speeds, origin_speed):
+        d1, _, f1 = point1_speed - origin_speed
+        d2, _, f2 = point2_speed - origin_speed
+        # print('w', part.name,  vm.Vector3D((f1, d2, -d1)))
+        return vm.Vector3D((-f1, -d2, d1))
+
+    def part_global_rotation_vector(self, part, istep):
+        frame = self.mechanism.part_frame(part, self.steps[istep])
+        return frame.Basis().OldCoordinates(self.part_local_rotation_vector(part, istep))
+        
+    def part_instant_rotation_axis_point(self, part, istep):
+        # axis_points = []
+        w = self.part_global_rotation_vector(part, istep)
+        w2 = w.Dot(w)
+        if w2 == 0.:
+            # TODO: put None 
+            return vm.O3D
+        frame = self.mechanism.part_frame(part, self.steps[istep])
+        
+        vo = self.part_point_speed(part, frame.NewCoordinates(vm.O3D), istep)        
+        return w.Cross(vo)/w2
 
     def plot2D(self, x=vm.x3D, y=vm.y3D, isteps=None, plot_frames=False):
         fig, ax = plt.subplots()
@@ -1027,7 +1096,8 @@ class MechanismConfigurations(DessiaObject):
         ax.margins(.1)
 
     def babylonjs(self, page='gm_babylonjs', plot_frames=False,
-                  plot_trajectories=True, use_cdn=False):
+                  plot_trajectories=True, plot_instant_rotation_axis=False,
+                  use_cdn=False):
 
 
         page+='.html'
@@ -1067,6 +1137,8 @@ class MechanismConfigurations(DessiaObject):
 
         meshes_string = 'var parts_parent = [];\n'
 
+
+
         for part in self.mechanism.parts:
             meshes_string += 'var part_children = [];\n'
             lines = part.wireframe_lines(part_points[part])
@@ -1085,11 +1157,16 @@ class MechanismConfigurations(DessiaObject):
 
             if plot_frames:
                 meshes_string += vm.OXYZ.babylonjs(parent='part_parent', size=0.15)
-#                meshes_string += 'part_meshes.push(line1);\n'
-#                meshes_string += 'part_meshes.push(line2);\n'
-#                meshes_string += 'part_meshes.push(line3);\n'
 
-#            meshes_string += 'parts.push(part_meshes);\n'
+            # if plot_instant_rotation_axis:
+            #     rotation_axis = self.par
+                
+        if plot_instant_rotation_axis:
+            for part in self.mechanism.parts:
+                line = vm.LineSegment3D(vm.O3D, vm.X3D)
+                meshes_string += line.Babylon(name='rotation_axis',  color=colors[part])
+                meshes_string += 'parts_parent.push(rotation_axis);\n'
+                
 
         linkages_string = ''
         for linkage in self.mechanism.linkages:
@@ -1119,8 +1196,10 @@ class MechanismConfigurations(DessiaObject):
         positions = []
         orientations = []
         linkage_positions = []
-#        frame_babylon = vm.Frame3D(vm.o3D, vm.x3D, vm.z3D, vm.y3D)
-        for step in self.steps:
+
+        n_steps = len(self.steps)
+
+        for istep, step in enumerate(self.steps):
             step_positions = []
             step_orientations = []
             step_linkage_positions = []
@@ -1134,6 +1213,37 @@ class MechanismConfigurations(DessiaObject):
                 step_orientations.append([list(frame.u),
                                           list(frame.v),
                                           list(frame.w)])
+                
+            
+            if plot_instant_rotation_axis:
+                if istep == n_steps-1:
+                    istep_speed = n_steps -2
+                    # step_speed = self.steps[istep_speed]
+                else:
+                    istep_speed = istep
+                    # step_speed = step
+                for part in self.mechanism.parts:
+                    u = self.part_global_rotation_vector(part, istep_speed)
+                    # print('\n ub', u)
+                    if u.Norm() == 0.:
+                        u = vm.Z3D
+                        v = vm.X3D
+                        w = vm.Y3D
+                        axis_point = vm.Point3D((1000, 1000, 0))
+                    else:                        
+                        u.Normalize()
+                        v = u.RandomUnitNormalVector()
+                        w = u.Cross(v)
+                        axis_point = self.part_instant_rotation_axis_point(part, istep_speed)
+                    
+                    # print(axis_point)
+                    # print(u)
+                    # print(v)
+                    # print(w)
+                    step_positions.append(list(axis_point))
+                    step_orientations.append([list(u),
+                                              list(v),
+                                              list(w)])
 
             for linkage in self.mechanism.linkages:
                 step_linkage_positions.append(list(self.mechanism.linkage_global_position(linkage, step)))
@@ -1141,6 +1251,9 @@ class MechanismConfigurations(DessiaObject):
             positions.append(step_positions)
             orientations.append(step_orientations)
             linkage_positions.append(step_linkage_positions)
+            
+            
+                
 
         trajectories = []
         if plot_trajectories:
