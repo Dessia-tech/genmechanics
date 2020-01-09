@@ -734,7 +734,7 @@ class MovingMechanism(Mechanism):
             else:
                 qs.append(basis_vector)
         if not failed_step:
-            return MechanismConfigurations(self, steps_imposed_parameters, qs)
+            return MechanismConfigurations(self,steps_imposed_parameters, qs)
 
 #    def solve_configurations(steps_imposed_parameters,
 #                             number_max_configurations)
@@ -795,12 +795,12 @@ def trajectory_derivative(trajectory, istep, delta_istep):
         istep2 = len(trajectory)-1
         istep1 = istep2 - delta_istep
         if istep1 < 0:
-            print(istep1, istep2)
+            # print(istep1, istep2)
             raise ValueError('Delta istep is too large!')
-    print(istep2, len(trajectory)-1)
+    # print(istep2, len(trajectory)-1)
     point1 = point_from_istep_on_trajectory(trajectory, istep1)
     point2 = point_from_istep_on_trajectory(trajectory, istep2)
-    print('tt', istep1, istep2, point1, point2)
+    # print('tt', istep1, istep2, point1, point2)
     return (point2-point1)
 
 class MechanismConfigurations(DessiaObject):
@@ -928,51 +928,92 @@ class MechanismConfigurations(DessiaObject):
 #        fig.canvas.set_window_title('Trajectory')
         return fig, ax
     
-    def part_point_speed(self, part, global_point, istep):
+    def part_local_point_global_speed(self, part, point, istep):
         """
         
         """
         frame1 = self.mechanism.part_frame(part, self.steps[istep])
         frame2 = self.mechanism.part_frame(part, self.steps[istep+1])
 
-        p1 = frame1.NewCoordinates(global_point)
-        p2 = frame2.NewCoordinates(global_point)
+        p1 = frame1.OldCoordinates(point)
+        p2 = frame2.OldCoordinates(point)
         return p2 - p1
     
-    def part_local_rotation_vector(self, part, istep):
+    def part_global_rotation_vector(self, part, istep):
         # rotation_vectors = []
         
-        frame1 = self.mechanism.part_frame(part, self.steps[istep])
-        frame2 = self.mechanism.part_frame(part, self.steps[istep+1])
-        
-        point1 = frame1.OldCoordinates(vm.Y3D)
-        point2 = frame2.OldCoordinates(vm.Z3D)
-
-        point1_speed = self.part_point_speed(part, point1, istep)
-        point2_speed = self.part_point_speed(part, point2, istep)
-        origin_speed = self.part_point_speed(part, vm.O3D, istep)
-        print('v', part.name, point1_speed, point2_speed)
-        # for p1s, p2s, origin_s in zip(point1_speeds, point2_speeds, origin_speed):
-        d1, _, f1 = point1_speed - origin_speed
-        d2, _, f2 = point2_speed - origin_speed
-        # print('w', part.name,  vm.Vector3D((f1, d2, -d1)))
-        return vm.Vector3D((-f1, -d2, d1))
-
-    def part_global_rotation_vector(self, part, istep):
         frame = self.mechanism.part_frame(part, self.steps[istep])
-        return frame.Basis().OldCoordinates(self.part_local_rotation_vector(part, istep))
+
+        # point1 = vm.Point3D.random(-1, 1, -1, 1, -1, 1)
+        # point2 = vm.Point3D.random(-1, 1, -1, 1, -1, 1)
+
+        # point1 = vm.Point3D.random(-1,1,-1,1,-1,1)
+        # point2 = vm.Point3D.random(-1,1,-1,1,-1,1)
+        point1 = vm.O3D
+        point1_speed = self.part_local_point_global_speed(part, point1, istep)
+        for point2 in [vm.X3D, vm.Y3D, vm.Z3D]:
+
+            point2_speed = self.part_local_point_global_speed(part, point2, istep)
+            # print('p1s', point1_speed)
+            # print('p2s', point2_speed)
+            delta_speeds = point2_speed - point1_speed
+            if not math.isclose(delta_speeds.Norm(), 0, abs_tol=1e-8):
+                # print('dsn', delta_speeds.Norm())
+                break
+        # TODO: check if delta_speeds is not null!
         
-    def part_instant_rotation_axis_point(self, part, istep):
+        p21 = frame.OldCoordinates(point2) - frame.OldCoordinates(point1)
+        # print('p21', p21)
+        # print('delta_speeds', delta_speeds)
+        # d_p21_2 = p21.Dot(p21)
+        # print(d_p21_2)
+        R = delta_speeds.Cross(p21)#/d_p21_2
+        return R
+        # # origin_speed = self.part_local_point_speed(part, vm.O3D, istep)
+        # print('v', part.name, point1_speed, point2_speed, '\n')
+        # print('b',point1_speed - origin_speed)
+        # print('c', point2_speed - origin_speed)
+        # # for p1s, p2s, origin_s in zip(point1_speeds, point2_speeds, origin_speed):
+        # d1, _, f1 = point1_speed - origin_speed
+        # d2, _, f2 = point2_speed - origin_speed
+        # print('w', part.name,  vm.Vector3D((f1, d2, -d1)))
+        # return vm.Vector3D((-f1, -d2, d1))
+
+    # def part_global_rotation_vector(self, part, istep):
+    #     frame = self.mechanism.part_frame(part, self.steps[istep])
+    #     return frame.Basis().OldCoordinates(self.part_local_rotation_vector(part, istep))
+        
+    def part_instant_rotation_global_axis_point(self, part, istep):
         # axis_points = []
         w = self.part_global_rotation_vector(part, istep)
+        # print('w', part.name, istep, w)
         w2 = w.Dot(w)
-        if w2 == 0.:
+        if math.isclose(w2, 0, abs_tol=1e-8):
             # TODO: put None 
-            return vm.O3D
+            # print('w=0', w)
+            # raise NotImplementedError()
+            return None
         frame = self.mechanism.part_frame(part, self.steps[istep])
         
-        vo = self.part_point_speed(part, frame.NewCoordinates(vm.O3D), istep)        
-        return w.Cross(vo)/w2
+        # point = vm.Point3D.random(-1,1,-1,1,-1,1)
+        # point = vm.Z3D
+        for point in [1*vm.X3D, 1*vm.Y3D, 1*vm.Z3D]:
+            vp = self.part_local_point_global_speed(part, point, istep) 
+            
+            # print('frame', frame)
+            # print('OA', frame.OldCoordinates(point))
+            # print('P', point, 'vp', vp, vp.Norm())
+            # print('w', w)
+            if not math.isclose(vp.Norm(), 0, abs_tol=1e-6):
+                # print(part.name)
+                # raise NotImplementedError
+                # print('cross', w.Cross(vp)/w2)
+                return frame.OldCoordinates(point) - w.Cross(vp)/w2
+        raise ValueError
+    
+    # def part_instant_rotation_global_axis_point(self, part, istep):
+    #     frame = self.mechanism.part_frame(part, self.steps[istep])
+    #     return frame.OldCoordinates(self.part_instant_rotation_local_axis_point(part, istep))
 
     def plot2D(self, x=vm.x3D, y=vm.y3D, isteps=None, plot_frames=False):
         fig, ax = plt.subplots()
@@ -1123,7 +1164,6 @@ class MechanismConfigurations(DessiaObject):
                 else:
                     ql = []
 
-
                 if part == linkage.part1:
                     linkage_position = linkage.part1_position_function(ql)
                 else:
@@ -1156,14 +1196,14 @@ class MechanismConfigurations(DessiaObject):
 
 
             if plot_frames:
-                meshes_string += vm.OXYZ.babylonjs(parent='part_parent', size=0.15)
+                meshes_string += vm.OXYZ.babylonjs(parent='part_parent', size=0.1)
 
             # if plot_instant_rotation_axis:
             #     rotation_axis = self.par
                 
         if plot_instant_rotation_axis:
             for part in self.mechanism.parts:
-                line = vm.LineSegment3D(vm.O3D, vm.X3D)
+                line = vm.LineSegment3D(-0.5*vm.X3D, 0.5*vm.X3D)
                 meshes_string += line.Babylon(name='rotation_axis',  color=colors[part])
                 meshes_string += 'parts_parent.push(rotation_axis);\n'
                 
@@ -1217,33 +1257,47 @@ class MechanismConfigurations(DessiaObject):
             
             if plot_instant_rotation_axis:
                 if istep == n_steps-1:
-                    istep_speed = n_steps -2
+                    istep_speed = n_steps-2
                     # step_speed = self.steps[istep_speed]
                 else:
                     istep_speed = istep
                     # step_speed = step
                 for part in self.mechanism.parts:
-                    u = self.part_global_rotation_vector(part, istep_speed)
-                    # print('\n ub', u)
-                    if u.Norm() == 0.:
-                        u = vm.Z3D
-                        v = vm.X3D
-                        w = vm.Y3D
-                        axis_point = vm.Point3D((1000, 1000, 0))
-                    else:                        
+                    
+                    # print('unorm', u, u.Norm())
+                    axis_point = self.part_instant_rotation_global_axis_point(part, istep_speed)
+                    if axis_point is None:
+                        # axis_point
+                    # if u.Norm() == 0:
+                    # if math.isclose(u.Norm(), 0, abs_tol=1e-8):
+                    # if False:
+                        # print('cond1')
+                        
+                        u = vm.X3D.copy()
+                        v = vm.Y3D.copy()
+                        w = vm.Z3D.copy()
+                        axis_point = vm.Point3D((0, 0, 0))
+                        # print('step', istep, part.name, 'default')
+                    else:  
+                        # print('cond2')
+                        u = self.part_global_rotation_vector(part, istep_speed)
+                        # print('@', istep, part.name, u)
                         u.Normalize()
                         v = u.RandomUnitNormalVector()
                         w = u.Cross(v)
-                        axis_point = self.part_instant_rotation_axis_point(part, istep_speed)
+                        
                     
                     # print(axis_point)
-                    # print(u)
+                    # print('R', part.name, u, u.Norm())
                     # print(v)
                     # print(w)
+                        
                     step_positions.append(list(axis_point))
                     step_orientations.append([list(u),
                                               list(v),
                                               list(w)])
+                    # print(step_positions)
+                    # print(step_orientations)
 
             for linkage in self.mechanism.linkages:
                 step_linkage_positions.append(list(self.mechanism.linkage_global_position(linkage, step)))
