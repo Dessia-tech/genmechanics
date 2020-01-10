@@ -36,14 +36,14 @@ class Parameter(DessiaObject):
                               periodicity=periodicity)
     def random_value(self):
         return random.uniform(self.lower_bound, self.upper_bound)
-    
+
     def are_values_equal(self, value1, value2, tol=1e-3):
         if self.periodicity is not None:
             value1 = value1 % self.periodicity
             value2 = value2 % self.periodicity
-            
+
         return math.isclose(value1, value2, abs_tol=tol)
-            
+
 
     def optimizer_bounds(self):
         if self.periodicity is not None:
@@ -51,7 +51,7 @@ class Parameter(DessiaObject):
                     self.upper_bound+0.5*self.periodicity)
         else:
             return (self.lower_bound, self.upper_bound)
-        
+
 
 class Linkage(DessiaObject):
     def __init__(self,
@@ -139,7 +139,7 @@ class RevoluteLinkage(Linkage):
                               part2_position=part2_position,
                               part1_basis=part1_basis,
                               part2_basis=part2_basis)
-        
+
         Linkage.__init__(self,
                          part1, lambda q: part1_position, part1_basis_f,
                          part2, lambda q: part2_position, part2_basis_f,
@@ -258,7 +258,7 @@ class PrismaticLinkage(Linkage):
 
         def part2_position_f(q):
             return part2_position
-        
+
         DessiaObject.__init__(self,
                               part1_position=part1_position,
                               part2_position=part2_position,
@@ -554,30 +554,30 @@ class MovingMechanism(Mechanism):
         for linkage in self.opened_linkages:
             residue += self.opened_linkage_gap(linkage, q).Norm()
         return residue
-    
+
     def reduced_x_to_full_x(self, xr, basis_vector, free_parameters_dofs):
         x = basis_vector[:]
 
         for qrv, i in zip(xr, free_parameters_dofs):
             x[i] = qrv
         return x
-    
+
     def full_x_to_reduced_x(self, x, free_parameters_dofs):
         return [x[i] for i in free_parameters_dofs]
-    
+
     def geometric_closing_residue_function(self, basis_vector,
                                            free_parameters_dofs):
-        
-        
+
+
         def residue_function(xr):
             x = self.reduced_x_to_full_x(xr, basis_vector, free_parameters_dofs)
-            
-        
+
+
             return self.opened_linkages_residue(x)
-        
+
         return residue_function
 
-    
+
     def _optimization_settings(self, imposed_parameters):
         # Free parameter identification
         free_parameters_dofs = []
@@ -591,22 +591,22 @@ class MovingMechanism(Mechanism):
             else:
                 free_parameters_dofs.append(i)
                 n_free_parameters += 1
-                
+
         bounds = []
         for (linkage, iparameter), idof in self.kinematic_parameters_mapping.items():
             if idof in free_parameters_dofs:
                 parameter = linkage.kinematic_parameters[iparameter]
                 free_parameters.append(parameter)
                 bounds.append(parameter.optimizer_bounds())
-            
+
             bounds_cma = [[], []]
             for bmin, bmax in bounds:
-               bounds_cma[0].append(bmin) 
-               bounds_cma[1].append(bmax) 
+               bounds_cma[0].append(bmin)
+               bounds_cma[1].append(bmax)
 
         return basis_vector, free_parameters_dofs, free_parameters, n_free_parameters, bounds, bounds_cma
-        
-    
+
+
     def find_configurations(self, imposed_parameters,
                            number_max_configurations,
                            number_starts=10, tol=1e-5,
@@ -636,14 +636,14 @@ class MovingMechanism(Mechanism):
 #            result = minimize(geometric_closing_residue, x0, bounds=bounds,
 #                              tol=0.1*tol)
 #            print('x0', x0, bounds)
-                
-                
+
+
             xr_opt, fopt = cma.fmin(geometric_closing_residue, xr0, 0.2,
                                   options={'bounds':bounds_cma,
                                            'ftarget': tol,
                                            'verbose': -9,
                                            'maxiter': 2000})[0:2]
-        
+
 
             if fopt <= tol:
 #                print('converged')
@@ -657,7 +657,7 @@ class MovingMechanism(Mechanism):
                     if equal:
 #                        print(x, result.x, 'are equal')
                         found_x = True
-                        
+
                 if not found_x:
                     xopt = self.reduced_x_to_full_x(xr_opt, basis_vector, free_parameters_dofs)
                     starting_points.append(xopt[:])
@@ -666,13 +666,17 @@ class MovingMechanism(Mechanism):
                         break
 
         print('Found {} configurations'.format(len(starting_points)))
-        
+
 
     def solve_from_initial_configuration(self, initial_parameter_values,
                                          steps_imposed_parameters,
                                          number_step_retries=5,
                                          max_failed_steps=3,
                                          tol=1e-4):
+        """
+        returns a MechanismConfigurations object. The initial point deduced from initial_parameter_values
+        is the first step of the MechanismConfigurations object.
+        """
 
 
         x0 = initial_parameter_values
@@ -680,11 +684,11 @@ class MovingMechanism(Mechanism):
         basis_vector, free_parameters_dofs, free_parameters, n_free_parameters, bounds, bounds_cma\
                 = self._optimization_settings(step_imposed_parameters)
         xr0 = self.full_x_to_reduced_x(x0, free_parameters_dofs)
-        
+
         n_steps = len(list(steps_imposed_parameters.values())[0])
-        
+
         qs = [x0]
-        
+
         number_failed_steps = 0
         failed_step = False
         for istep in range(n_steps):
@@ -693,10 +697,10 @@ class MovingMechanism(Mechanism):
             # basis vector needs update at each time step!
             basis_vector, free_parameters_dofs, free_parameters, n_free_parameters, bounds, bounds_cma\
                 = self._optimization_settings(step_imposed_parameters)
-                
+
             geometric_closing_residue = self.geometric_closing_residue_function(basis_vector,
                                                                                 free_parameters_dofs)
-                        
+
             if n_free_parameters > 0:
                 step_converged = False
                 n_tries_step = 1
@@ -720,7 +724,7 @@ class MovingMechanism(Mechanism):
                 if step_converged:
                     xr0 = xr_opt[:]
                     x = self.reduced_x_to_full_x(xr_opt, basis_vector, free_parameters_dofs)
-                        
+
                     qs.append(x[:])
                 else:
                     print('@istep {}: residue: {}'.format(istep, fopt))
@@ -729,7 +733,7 @@ class MovingMechanism(Mechanism):
                         print('Failed {} steps, stopping configuration computation'.format(max_failed_steps))
                         failed_step = True
                         break
-                
+
 
             else:
                 qs.append(basis_vector)
@@ -738,11 +742,11 @@ class MovingMechanism(Mechanism):
 
 #    def solve_configurations(steps_imposed_parameters,
 #                             number_max_configurations)
-#    
+#
 #        for configuration in self.find_initial_configurations(steps_imposed_parameters,
 #                                    number_max_configurations,
 #                                    number_starts=10, tol=1e-5):
-#        
+#
 #            yield self.solve_from_initial_configuration(self, initial_parameter_values,
 #                                         steps_imposed_parameters,
 #                                         number_step_retries=5,
@@ -755,7 +759,7 @@ def istep_from_value_on_trajectory(trajectory, value, axis):
         interval = sorted((point1[axis], point2[axis]))
         if (interval[0] <= value) and (value < interval[1]):
             alpha = (value-point1[axis])/(point2[axis]-point1[axis])
-            if alpha < 0 or alpha > 1: 
+            if alpha < 0 or alpha > 1:
                 raise ValueError
             return ipoint + alpha
     raise ValueError
@@ -779,7 +783,7 @@ def trajectory_point_from_value(trajectory, value, axis):
             alpha = (value - point1[axis])/(point2[axis] - point1[axis])
             return (1-alpha)*point1 + alpha*point2
     return None
-        
+
 def trajectory_derivative(trajectory, istep, delta_istep):
     istep1 = istep-0.5*delta_istep
     istep2 = istep+0.5*delta_istep
@@ -801,7 +805,7 @@ class MechanismConfigurations(DessiaObject):
                  mechanism,
                  steps_imposed_parameters,
                  steps):
-        
+
         number_steps = len(steps)
 
 
@@ -810,7 +814,7 @@ class MechanismConfigurations(DessiaObject):
                               steps_imposed_parameters=steps_imposed_parameters,
                               steps=steps,
                               number_steps=number_steps)
-        
+
         if not self.is_valid():
             raise ValueError
 
@@ -837,7 +841,6 @@ class MechanismConfigurations(DessiaObject):
 
         istep1 = int(istep)
         alpha = istep - istep1
-
 
         new_step = [(1-alpha)*s1+alpha*s2 for s1, s2 in zip(self.steps[istep1],
                                                             self.steps[istep1+1])]
@@ -921,12 +924,12 @@ class MechanismConfigurations(DessiaObject):
             ax.set_aspect('equal')
 #        fig.canvas.set_window_title('Trajectory')
         return fig, ax
-    
-    
-    
+
+
+
     def part_local_point_global_speed(self, part, point, istep):
         """
-        
+
         """
         if (istep < 0) or (istep > self.number_steps-1):
             raise ValueError('istep outside of bounds: {}'.format(istep))
@@ -957,7 +960,7 @@ class MechanismConfigurations(DessiaObject):
             alpha = istep - (self.number_steps - 2.5)
             return (1-alpha)*v1 + alpha*v2
         else:
-            
+
             int_istep = int(istep)
             if int_istep+0.5 == istep:
                 # Using exact derivative
@@ -979,11 +982,11 @@ class MechanismConfigurations(DessiaObject):
                 v2 = p3 - p2
                 alpha = istep - i1 - 0.5
                 return (1-alpha)*v1 + alpha*v2
-                
 
-    
+
+
     def part_global_rotation_vector(self, part, istep):
-        
+
         frame = self.mechanism.part_frame(part, self.steps[istep])
 
         point1 = vm.O3D
@@ -994,27 +997,27 @@ class MechanismConfigurations(DessiaObject):
             delta_speeds = point2_speed - point1_speed
             if not math.isclose(delta_speeds.Norm(), 0, abs_tol=1e-8):
                 break
-        
+
         p21 = frame.OldCoordinates(point2) - frame.OldCoordinates(point1)
         R = delta_speeds.Cross(p21)#/d_p21_2
         return R
 
-        
+
     def part_instant_rotation_global_axis_point(self, part, istep):
         w = self.part_global_rotation_vector(part, istep)
         w2 = w.Dot(w)
         if math.isclose(w2, 0, abs_tol=1e-8):
             return None
         frame = self.mechanism.part_frame(part, self.steps[istep])
-        
+
         for point in [vm.O3D, 0.1*vm.X3D, 0.1*vm.Y3D, 0.1*vm.Z3D]:
-            vp = self.part_local_point_global_speed(part, point, istep) 
-            
+            vp = self.part_local_point_global_speed(part, point, istep)
+
             if not math.isclose(vp.Norm(), 0, abs_tol=1e-6):
                 return frame.OldCoordinates(point) - w.Cross(vp)/w2
         raise ValueError
-    
-    
+
+
     def plot2D(self, x=vm.x3D, y=vm.y3D, isteps=None, plot_frames=False):
         fig, ax = plt.subplots()
 
@@ -1200,13 +1203,13 @@ class MechanismConfigurations(DessiaObject):
 
             # if plot_instant_rotation_axis:
             #     rotation_axis = self.par
-                
+
         if plot_instant_rotation_axis:
             for part in self.mechanism.parts:
                 line = vm.LineSegment3D(-0.5*vm.X3D, 0.5*vm.X3D)
                 meshes_string += line.Babylon(name='rotation_axis',  color=colors[part], type_='dashed')
                 meshes_string += 'parts_parent.push(rotation_axis);\n'
-                
+
 
         linkages_string = ''
         for linkage in self.mechanism.linkages:
@@ -1253,8 +1256,8 @@ class MechanismConfigurations(DessiaObject):
                 step_orientations.append([list(frame.u),
                                           list(frame.v),
                                           list(frame.w)])
-                
-            
+
+
             if plot_instant_rotation_axis:
                 # if istep == n_steps-1:
                 #     istep_speed = n_steps-2
@@ -1263,7 +1266,7 @@ class MechanismConfigurations(DessiaObject):
                 #     istep_speed = istep
                 #     # step_speed = step
                 for part in self.mechanism.parts:
-                    
+
                     # print('unorm', u, u.Norm())
                     axis_point = self.part_instant_rotation_global_axis_point(part, istep)
                     if axis_point is None:
@@ -1271,12 +1274,12 @@ class MechanismConfigurations(DessiaObject):
                         v = vm.Y3D.copy()
                         w = vm.Z3D.copy()
                         axis_point = vm.Point3D((100, 100, 100))
-                    else:  
+                    else:
                         u = self.part_global_rotation_vector(part, istep)
                         u.Normalize()
                         v = u.RandomUnitNormalVector()
                         w = u.Cross(v)
-                        
+
                     step_positions.append(list(axis_point))
                     step_orientations.append([list(u),
                                               list(v),
@@ -1290,9 +1293,9 @@ class MechanismConfigurations(DessiaObject):
             positions.append(step_positions)
             orientations.append(step_orientations)
             linkage_positions.append(step_linkage_positions)
-            
-            
-                
+
+
+
 
         trajectories = []
         if plot_trajectories:
