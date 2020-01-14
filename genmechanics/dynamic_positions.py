@@ -514,6 +514,7 @@ class MovingMechanism(Mechanism):
             frame = frame + linkage_frame
 
         return frame
+    
 
     def linkage_global_position(self, linkage, global_parameter_values):
         if linkage.positions_require_kinematic_parameters:
@@ -762,7 +763,10 @@ def istep_from_value_on_trajectory(trajectory, value, axis):
             if alpha < 0 or alpha > 1:
                 raise ValueError
             return ipoint + alpha
-    raise ValueError
+    values = [p[axis] for p in trajectory]
+    min_values = min(values)
+    max_values = max(values)
+    raise ValueError('Specified value not found in trajectory: {} not in [{}, {}]'.format(value, min_values, max_values))
 
 def point_from_istep_on_trajectory(trajectory, istep):
     istep1 = int(istep)
@@ -1018,7 +1022,8 @@ class MechanismConfigurations(DessiaObject):
         raise ValueError
 
 
-    def plot2D(self, x=vm.x3D, y=vm.y3D, isteps=None, plot_frames=False):
+    def plot2D(self, x=vm.x3D, y=vm.y3D, isteps=None, plot_frames=False,
+               plot_rotation_axis=False):
         fig, ax = plt.subplots()
 
         # Linkage colors
@@ -1120,7 +1125,7 @@ class MechanismConfigurations(DessiaObject):
 #                    ax.plot([x1, xm], [y1, ym], color=colors[part])
 
                 for line in Part.wireframe_lines(points):
-                    line.MPLPlot2D(x, y, ax, color=colors[part])
+                    line.MPLPlot2D(x, y, ax, color=colors[part], width=5)
 
                 part_frame = self.mechanism.part_frame(part, step)
                 for point in part.interest_points:
@@ -1132,6 +1137,13 @@ class MechanismConfigurations(DessiaObject):
                     part_frame = self.mechanism.part_frame(part, step)
                     part_frame.plot2d(x=x, y=y, ax=ax)
 
+                if plot_rotation_axis:
+                    axis = self.part_global_rotation_vector(part, istep)
+                    point = self.part_instant_rotation_global_axis_point(part, istep)
+                    if point is not None:
+                        axis.Normalize()
+                        line = vm.Line3D(point-axis, point+axis)
+                        line.PlaneProjection2D(x, y).MPLPlot(ax=ax, color=colors[part], dashed=True)
 
 
         ax.set_aspect('equal')
