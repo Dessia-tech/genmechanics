@@ -1,2 +1,2 @@
 recursive-include genmechanics/ *.py
-recursice-exclude __pycache__/ *
+recursive-exclude __pycache__/ *

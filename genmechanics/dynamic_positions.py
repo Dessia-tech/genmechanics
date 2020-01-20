@@ -415,17 +415,26 @@ class MovingMechanism(Mechanism):
     def settings_graph(self):
         graph = self.holonomic_graph.copy()
         self.opened_linkages = []
-        for cycle in nx.cycle_basis(graph):
+        # print('cycles deleting')
+        # graph_has_cycles = True
+        graph_cycles = nx.cycle_basis(graph)
+        
+        while len(graph_cycles) != 0:
+            # Deleting first cycle of graph
+            
+            
             ground_distance = [(l, len(nx.shortest_path(graph, l, self.ground)))\
-                               for l in cycle\
+                               for l in graph_cycles[0]\
                                if l in self.linkages\
                                    and not l in self.opened_linkages\
                                    and not l.positions_require_kinematic_parameters
                                ]
 
             linkage_to_delete = max(ground_distance, key=lambda x:x[1])[0]
-            self.opened_linkages.append(linkage_to_delete)
+            # print(linkage_to_delete.name)
+            # self.opened_linkages.append(linkage_to_delete)
             graph.remove_node(linkage_to_delete)
+            graph_cycles = nx.cycle_basis(graph)
 
         self.linkages_kinematic_setting = [l for l in self.linkages if l not in self.opened_linkages]
         self.settings_graph = graph
@@ -499,7 +508,12 @@ class MovingMechanism(Mechanism):
             return self._settings_path[part1, part2]
         else:
             path = []
-            raw_path = list(nx.shortest_path(self.settings_graph, part1, part2))
+            try:
+                raw_path = list(nx.shortest_path(self.settings_graph, part1, part2))
+            except nx.NetworkXNoPath:
+                self.plot_settings_graph()
+                print(part1.name, part2.name)
+                raise nx.NetworkXError
             for part1, linkage, part2 in zip(raw_path[:-2:2], raw_path[1::2], raw_path[2::2]+[part2]):
                 path.append((part1, linkage, linkage.part1==part1, part2))
 
