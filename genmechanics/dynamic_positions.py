@@ -364,20 +364,13 @@ class BallLinkage(Linkage):
 
         """
 
-        def part1_basis_f(q):
-            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)\
-                              .Rotation(part1_basis.v, q[1], copy=True)\
-                              .Rotation(part1_basis.w, q[2], copy=True)
-
-        def part2_basis_f(q):
-            return part2_basis
-
-
         DessiaObject.__init__(self,
                               part1_position=part1_position,
                               part2_position=part2_position,
                               part1_basis=part1_basis,
                               part2_basis=part2_basis)
+
+        part1_basis_f, part2_basis_f = self.basis_functions()
 
         Linkage.__init__(self,
                          part1, lambda q: part1_position, part1_basis_f,
@@ -388,6 +381,29 @@ class BallLinkage(Linkage):
                           Parameter(0., 2*math.pi, 2*math.pi)], name)
 
 
+    def update_part1_point(self, new_position):
+        self.part1_position = new_position
+        self.part1_position_function = lambda q: new_position
+
+
+    def update_part2_point(self, new_position):
+        self.part2_position = new_position
+        self.part2_position_function = lambda q: new_position
+
+    def basis_functions(self):
+        
+        def part1_basis_f(q):
+            return self.part1_basis.Rotation(self.part1_basis.u, q[0], copy=True)\
+                              .Rotation(self.part1_basis.v, q[1], copy=True)\
+                              .Rotation(self.part1_basis.w, q[2], copy=True)
+
+        def part2_basis_f(q):
+            return self.part2_basis
+        
+        return part1_basis_f, part2_basis_f
+
+class NoConfigurationFoundError(Exception):
+    pass
 
 class MovingMechanism(Mechanism):
     def __init__(self, linkages, ground, name=''):
@@ -400,7 +416,7 @@ class MovingMechanism(Mechanism):
                            None,
                            name=name)
 
-        self.parts_setting_path = {}
+        # self.parts_setting_path = {}
         self._settings_path = {}
 
         # Settings
@@ -422,7 +438,6 @@ class MovingMechanism(Mechanism):
         while len(graph_cycles) != 0:
             # Deleting first cycle of graph
             
-            
             ground_distance = [(l, len(nx.shortest_path(graph, l, self.ground)))\
                                for l in graph_cycles[0]\
                                if l in self.linkages\
@@ -432,7 +447,7 @@ class MovingMechanism(Mechanism):
 
             linkage_to_delete = max(ground_distance, key=lambda x:x[1])[0]
             # print(linkage_to_delete.name)
-            # self.opened_linkages.append(linkage_to_delete)
+            self.opened_linkages.append(linkage_to_delete)
             graph.remove_node(linkage_to_delete)
             graph_cycles = nx.cycle_basis(graph)
 
@@ -514,8 +529,8 @@ class MovingMechanism(Mechanism):
                 self.plot_settings_graph()
                 print(part1.name, part2.name)
                 raise nx.NetworkXError
-            for part1, linkage, part2 in zip(raw_path[:-2:2], raw_path[1::2], raw_path[2::2]+[part2]):
-                path.append((part1, linkage, linkage.part1==part1, part2))
+            for path_part1, linkage, path_part2 in zip(raw_path[:-2:2], raw_path[1::2], raw_path[2::2]+[part2]):
+                path.append((path_part1, linkage, linkage.part1==path_part1, path_part2))
 
             self._settings_path[part1, part2] = path
             return path
@@ -681,6 +696,7 @@ class MovingMechanism(Mechanism):
                         break
 
         print('Found {} configurations'.format(len(starting_points)))
+        raise NoConfigurationFoundError
 
 
     def solve_from_initial_configuration(self, initial_parameter_values,
@@ -726,7 +742,6 @@ class MovingMechanism(Mechanism):
                     xr_opt = result.x
                     fopt = result.fun
                     if fopt > tol:
-#                        print('using cma')
                         xr_opt, fopt = cma.fmin(geometric_closing_residue, xr0, 0.1,
                                               options={'bounds':bounds_cma,
     #                                              'tolfun':0.5*tol,
@@ -735,7 +750,6 @@ class MovingMechanism(Mechanism):
                                                        'maxiter': 500})[0:2]
                     n_tries_step += 1
                     step_converged = fopt < tol
-#                    print('a', result.x, free_parameters_dofs)
                 if step_converged:
                     xr0 = xr_opt[:]
                     x = self.reduced_x_to_full_x(xr_opt, basis_vector, free_parameters_dofs)
@@ -897,7 +911,7 @@ class MechanismConfigurations(DessiaObject):
 
         return trajectory
 
-    def plot2D_trajectory(self, point, part, reference_part, x=vm.x3D, y=vm.y3D, equal_aspect=True):
+    def plot2D_trajectory(self, point, part, reference_part, x=vm.X3D, y=vm.Y3D, equal_aspect=True):
         xt = []
         yt = []
         for traj_point in self.trajectory(point, part, reference_part):
@@ -1036,7 +1050,7 @@ class MechanismConfigurations(DessiaObject):
         raise ValueError
 
 
-    def plot2D(self, x=vm.x3D, y=vm.y3D, isteps=None, plot_frames=False,
+    def plot2D(self, x=vm.X3D, y=vm.Y3D, isteps=None, plot_frames=False,
                plot_rotation_axis=False):
         fig, ax = plt.subplots()
 
