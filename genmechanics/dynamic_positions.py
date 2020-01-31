@@ -663,10 +663,12 @@ class MovingMechanism(Mechanism):
             else:
                 xr0 = [starting_point[i] for i in free_parameters_dofs]
 
-#            result = minimize(geometric_closing_residue, x0, bounds=bounds,
-#                              tol=0.1*tol)
-#            print('x0', x0, bounds)
-
+            # result = minimize(geometric_closing_residue, xr0, bounds=bounds,
+            #                   tol=0.1*tol)
+            # fopt = result.fun
+            # if fopt < tol:
+            #     xr_opt = result.x
+            # else:
 
             xr_opt, fopt = cma.fmin(geometric_closing_residue, xr0, 0.2,
                                   options={'bounds':bounds_cma,
@@ -782,11 +784,26 @@ class MovingMechanism(Mechanism):
 #                                         max_failed_steps=3,
 #                                         tol=1e-4)
 
+def istep_from_value_on_list(list_, value):
+    for ipoint, (point1, point2) in enumerate(zip(list_[:-1],
+                                                  list_[1:])):
+        interval = sorted((point1, point2))
+        if (interval[0] <= value) and (value <= interval[1]):
+            alpha = (value-point1)/(point2-point1)
+            if alpha < 0 or alpha > 1:
+                raise ValueError
+            return ipoint + alpha
+    values = [p for p in list_]
+    min_values = min(values)
+    max_values = max(values)
+    raise ValueError('Specified value not found in list_: {} not in [{}, {}]'.format(value, min_values, max_values))
+
+
 def istep_from_value_on_trajectory(trajectory, value, axis):
     for ipoint, (point1, point2) in enumerate(zip(trajectory[:-1],
                                                   trajectory[1:])):
         interval = sorted((point1[axis], point2[axis]))
-        if (interval[0] <= value) and (value < interval[1]):
+        if (interval[0] <= value) and (value <= interval[1]):
             alpha = (value-point1[axis])/(point2[axis]-point1[axis])
             if alpha < 0 or alpha > 1:
                 raise ValueError
@@ -800,7 +817,7 @@ def point_from_istep_on_trajectory(trajectory, istep):
     istep1 = int(istep)
     if istep1 == istep:
         # No interpolation needed
-        return trajectory[istep]
+        return trajectory[int(istep)]
     else:
         alpha = istep - istep1
         point1 = trajectory[istep1]
@@ -872,11 +889,14 @@ class MechanismConfigurations(DessiaObject):
         """
 
         istep1 = int(istep)
+        
         alpha = istep - istep1
+        if alpha == 0.:
+            return self.steps[istep1]
 
-        new_step = [(1-alpha)*s1+alpha*s2 for s1, s2 in zip(self.steps[istep1],
-                                                            self.steps[istep1+1])]
-        return new_step
+        return [(1-alpha)*s1+alpha*s2 for s1, s2 in zip(self.steps[istep1],
+                                                        self.steps[istep1+1])]
+        
 
     def plot_kinematic_parameters(self,
                                   linkage1, kinematic_parameter1,
@@ -1019,7 +1039,8 @@ class MechanismConfigurations(DessiaObject):
 
     def part_global_rotation_vector(self, part, istep):
 
-        frame = self.mechanism.part_frame(part, self.steps[istep])
+        step = self.interpolate_step(istep)
+        frame = self.mechanism.part_frame(part, step)
 
         point1 = vm.O3D
         point1_speed = self.part_local_point_global_speed(part, point1, istep)
@@ -1040,7 +1061,8 @@ class MechanismConfigurations(DessiaObject):
         w2 = w.Dot(w)
         if math.isclose(w2, 0, abs_tol=1e-8):
             return None
-        frame = self.mechanism.part_frame(part, self.steps[istep])
+        step = self.interpolate_step(istep)
+        frame = self.mechanism.part_frame(part, step)
 
         for point in [vm.O3D, 0.1*vm.X3D, 0.1*vm.Y3D, 0.1*vm.Z3D]:
             vp = self.part_local_point_global_speed(part, point, istep)
