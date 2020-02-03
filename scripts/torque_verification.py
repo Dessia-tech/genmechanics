@@ -17,9 +17,9 @@ L=0.1
 ground=genmechanics.Part('ground')
 shaft1=genmechanics.Part('shaft1')
 
-bearing=genmechanics.linkages.RevoluteLinkage(ground,shaft1,[0,0,0],[0,0,0],'bearing')
+bearing=genmechanics.linkages.FrictionlessRevoluteLinkage(ground,shaft1,[0,0,0],[0,0,0],'bearing')
 
-mech=genmechanics.Mechanism([bearing],ground)
+mech=genmechanics.Mechanism([bearing], ground)
 
 load1=loads.KnownMechanicalLoad(shaft1,[0,L,0],[0,0,0],[0,0,F],[0,0,0],'load')
 load2=loads.UnknownMechanicalLoad(shaft1,[0,0,0],[0,0,0],[],[0],'output_torque')

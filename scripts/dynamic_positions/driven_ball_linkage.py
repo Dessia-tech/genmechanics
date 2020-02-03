@@ -21,12 +21,34 @@ arm_linkage = BallLinkage(ground, vm.Point3D((-0.07, 0.1, 0.12)), vm.XYZ,
 mechanism = MovingMechanism([arm_linkage],
                             ground, name='Crank_rod_mechanism')
 
-manual_configuration = MechanismConfigurations(mechanism, [[0.05, 0.05, 0],
-                                                           [0.1, 0.1, 0],
-                                                           [0.15, 0.15, 0],
-                                                           [0.2, 0.2, 0]])
-#manual_configuration.plot2D(x=vm.y3D, y=vm.z3D)
-manual_configuration.babylonjs(plot_frames=True, plot_trajectories=True)
+manual_configuration = MechanismConfigurations(mechanism, None,
+                                               [[0.05, 0.05, 0],
+                                                [0.1, 0.1, 0],
+                                                [0.15, 0.15, 0],
+                                                [0.2, 0.2, 0]])
+
+manual_X_rotation = MechanismConfigurations(mechanism, None,
+                                               [[0.05,0., 0],
+                                                [0.1, 0., 0],
+                                                [0.15, 0., 0],
+                                                [0.2, 0., 0]])
+
+manual_Y_rotation = MechanismConfigurations(mechanism, None,
+                                               [[0., 0.05,0.],
+                                                [0., 0.1, 0.],
+                                                [0., 0.15, 0],
+                                                [0., 0.2, 0.]])
+
+manual_Z_rotation = MechanismConfigurations(mechanism, None,
+                                               [[0., 0., 0.05],
+                                                [0., 0., 0.1],
+                                                [0., 0., 0.15],
+                                                [0., 0., 0.2]])
+
+manual_configuration.babylonjs(plot_frames=True, plot_trajectories=True, plot_instant_rotation_axis=True)
+manual_X_rotation.babylonjs(plot_frames=True, plot_trajectories=True, plot_instant_rotation_axis=True)
+manual_Y_rotation.babylonjs(plot_frames=True, plot_trajectories=True, plot_instant_rotation_axis=True)
+manual_Z_rotation.babylonjs(plot_frames=True, plot_trajectories=True, plot_instant_rotation_axis=True)
 
 #configurations = mechanism.solve_configurations({0: npy.arange(0, 2*3.14, 0.1)})
 #for configuration in configurations:

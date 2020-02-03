@@ -27,6 +27,8 @@ class ModelError(Exception):
         return 'Model Error: ' + self.message
 
 class Part(DessiaObject):
+    _non_eq_attributes = ['name', 'interest_points']
+    
     def __init__(self, name='', interest_points=None):
         if interest_points is None:
             self.interest_points = []

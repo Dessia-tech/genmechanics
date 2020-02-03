@@ -140,10 +140,13 @@ var createScene = function () {
   {{linkages_string | safe}}
 
   var positions = {{positions}};
+
   var orientations = {{orientations}};
+
   var linkage_positions = {{linkage_positions}};
 
   var trajectories = {{trajectories}};
+
   for (let trajectory of trajectories){
     var points = [];
     for(let point_vm of trajectory){
@@ -219,6 +222,7 @@ var createScene = function () {
 
   advancedTexture.addControl(buttonsContainer);
 
+  console.log('nparts', n_parts)
 
   var showStep = function (istep){
     // Parts position update
