@@ -37,7 +37,7 @@ p2a=npy.array([0,e1,0])
 p2b=npy.array([L,e1,0])
 
 
-pgs1=0.5*(p1a+p1b)*r1+(1-r1)*0.5*(p2a+p2b)
+pgs1 = 0.5*(p1a+p1b)*r1+(1-r1)*0.5*(p2a+p2b)
 print(pgs1)
 
 
@@ -57,7 +57,8 @@ imposed_speeds=[(bearing1a,0,w)]
 load1=loads.KnownLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
 load2=loads.SimpleUnknownLoad(shaft2,[3*L/2,0,0],[0,0,0],[],[0],'output torque')
 
-mech=genmechanics.Mechanism([bearing1a,bearing1b,bearing2a,bearing2b,gearset12],ground,imposed_speeds,[load1],[load2])
+mech=genmechanics.Mechanism([bearing1a, bearing1b, bearing2a, bearing2b, gearset12],
+                            ground, imposed_speeds, [load1],[load2])
 
 #r=mech.StaticAnalysis()
 
