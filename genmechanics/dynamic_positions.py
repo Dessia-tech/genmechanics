@@ -54,6 +54,10 @@ class Parameter(DessiaObject):
 
 
 class Linkage(DessiaObject):
+    _non_serializable_attributes = ['part1_position_function',
+                                    'part2_position_function',
+                                    'part1_basis_function',
+                                    'part2_basis_function']
     def __init__(self,
                  part1, part1_position_function, part1_basis_function,
                  part2, part2_position_function, part2_basis_function,
