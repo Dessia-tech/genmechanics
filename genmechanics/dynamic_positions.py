@@ -332,7 +332,10 @@ class LimitedBallLinkage(Linkage):
                  part2, part2_position, part2_basis,
                  name='LimitedBallLinkage'):
         """
-
+        Allowed movements are:
+            - a rotation around part1 basis u
+            - a rotation around part1 basis v
+            
         """
 
         def part1_basis_f(q):
@@ -539,7 +542,7 @@ class MovingMechanism(Mechanism):
             self._settings_path[part1, part2] = path
             return path
 
-    def part_frame(self, part, kinematic_parameters_values):
+    def part_global_frame(self, part, kinematic_parameters_values):
         frame = vm.OXYZ
         for part1, linkage, linkage_side, part2 in self.settings_path(self.ground, part):
             linkage_parameters_values = self.extract_linkage_parameters_values(linkage, kinematic_parameters_values)
@@ -547,7 +550,16 @@ class MovingMechanism(Mechanism):
             frame = frame + linkage_frame
 
         return frame
-    
+
+
+    def part_relative_frame(self, part, reference_part, kinematic_parameters_values):
+        frame = vm.OXYZ
+        for part1, linkage, linkage_side, part2 in self.settings_path(reference_part, part):
+            linkage_parameters_values = self.extract_linkage_parameters_values(linkage, kinematic_parameters_values)
+            linkage_frame = linkage.frame(linkage_parameters_values, side=linkage_side)
+            frame = frame + linkage_frame
+
+        return frame    
 
     def linkage_global_position(self, linkage, global_parameter_values):
         if linkage.positions_require_kinematic_parameters:
@@ -557,7 +569,7 @@ class MovingMechanism(Mechanism):
             ql = []
 
 
-        part1_frame = self.part_frame(linkage.part1, global_parameter_values)
+        part1_frame = self.part_global_frame(linkage.part1, global_parameter_values)
         return part1_frame.OldCoordinates(linkage.part1_position_function(ql))
 
 
@@ -571,15 +583,15 @@ class MovingMechanism(Mechanism):
             ql = self.extract_linkage_parameters_values(linkage, global_parameter_values)
         else:
             ql = []
-        position1 = self.part_frame(linkage.part1, global_parameter_values).OldCoordinates(linkage.part1_position_function(ql))
-        position2 = self.part_frame(linkage.part2, global_parameter_values).OldCoordinates(linkage.part2_position_function(ql))
+        position1 = self.part_global_frame(linkage.part1, global_parameter_values).OldCoordinates(linkage.part1_position_function(ql))
+        position2 = self.part_global_frame(linkage.part2, global_parameter_values).OldCoordinates(linkage.part2_position_function(ql))
         return position2 - position1
 
     def opened_linkage_misalignment(self, linkage, global_parameter_values):
         ql = self.extract_linkage_parameters_values(linkage, global_parameter_values)
 
-        basis1 = self.part_frame(linkage.part1, global_parameter_values).Basis()
-        basis2 = self.part_frame(linkage.part2, global_parameter_values).Basis()
+        basis1 = self.part_global_frame(linkage.part1, global_parameter_values).Basis()
+        basis2 = self.part_global_frame(linkage.part2, global_parameter_values).Basis()
         basis = basis2 - basis1 - linkage.basis(ql)
         return basis
 
@@ -926,8 +938,8 @@ class MechanismConfigurations(DessiaObject):
 
         trajectory = []
         for step in self.steps:
-            frame1 = self.mechanism.part_frame(part, step)
-            frame2 = self.mechanism.part_frame(reference_part, step)
+            frame1 = self.mechanism.part_global_frame(part, step)
+            frame2 = self.mechanism.part_global_frame(reference_part, step)
             frame = frame1 - frame2
             trajectory.append(frame.OldCoordinates(point))
 
@@ -991,9 +1003,9 @@ class MechanismConfigurations(DessiaObject):
             raise ValueError('istep outside of bounds: {}'.format(istep))
         elif istep < 0.5:
             # Backward extrapolation from speeds 1 and 2
-            frame1 = self.mechanism.part_frame(part, self.steps[0])
-            frame2 = self.mechanism.part_frame(part, self.steps[1])
-            frame3 = self.mechanism.part_frame(part, self.steps[2])
+            frame1 = self.mechanism.part_global_frame(part, self.steps[0])
+            frame2 = self.mechanism.part_global_frame(part, self.steps[1])
+            frame3 = self.mechanism.part_global_frame(part, self.steps[2])
             p1 = frame1.OldCoordinates(point)
             p2 = frame2.OldCoordinates(point)
             p3 = frame3.OldCoordinates(point)
@@ -1005,9 +1017,9 @@ class MechanismConfigurations(DessiaObject):
         elif istep > self.number_steps-1.5:
             # forward extrapolation from speeds n-1 and n
             i1 = int(istep-0.5)
-            frame1 = self.mechanism.part_frame(part, self.steps[-3])
-            frame2 = self.mechanism.part_frame(part, self.steps[-2])
-            frame3 = self.mechanism.part_frame(part, self.steps[-1])
+            frame1 = self.mechanism.part_global_frame(part, self.steps[-3])
+            frame2 = self.mechanism.part_global_frame(part, self.steps[-2])
+            frame3 = self.mechanism.part_global_frame(part, self.steps[-1])
             p1 = frame1.OldCoordinates(point)
             p2 = frame2.OldCoordinates(point)
             p3 = frame3.OldCoordinates(point)
@@ -1020,17 +1032,17 @@ class MechanismConfigurations(DessiaObject):
             int_istep = int(istep)
             if int_istep+0.5 == istep:
                 # Using exact derivative
-                frame1 = self.mechanism.part_frame(part, self.steps[int_istep])
-                frame2 = self.mechanism.part_frame(part, self.steps[int_istep+1])
+                frame1 = self.mechanism.part_global_frame(part, self.steps[int_istep])
+                frame2 = self.mechanism.part_global_frame(part, self.steps[int_istep+1])
                 p1 = frame1.OldCoordinates(point)
                 p2 = frame2.OldCoordinates(point)
                 return p2 - p1
             else:
                 # interpolation in between
                 i1 = int(istep-0.5)
-                frame1 = self.mechanism.part_frame(part, self.steps[i1])
-                frame2 = self.mechanism.part_frame(part, self.steps[i1+1])
-                frame3 = self.mechanism.part_frame(part, self.steps[i1+2])
+                frame1 = self.mechanism.part_global_frame(part, self.steps[i1])
+                frame2 = self.mechanism.part_global_frame(part, self.steps[i1+1])
+                frame3 = self.mechanism.part_global_frame(part, self.steps[i1+2])
                 p1 = frame1.OldCoordinates(point)
                 p2 = frame2.OldCoordinates(point)
                 p3 = frame3.OldCoordinates(point)
@@ -1044,7 +1056,7 @@ class MechanismConfigurations(DessiaObject):
     def part_global_rotation_vector(self, part, istep):
 
         step = self.interpolate_step(istep)
-        frame = self.mechanism.part_frame(part, step)
+        frame = self.mechanism.part_global_frame(part, step)
 
         point1 = vm.O3D
         point1_speed = self.part_local_point_global_speed(part, point1, istep)
@@ -1066,7 +1078,7 @@ class MechanismConfigurations(DessiaObject):
         if math.isclose(w2, 0, abs_tol=1e-8):
             return None
         step = self.interpolate_step(istep)
-        frame = self.mechanism.part_frame(part, step)
+        frame = self.mechanism.part_global_frame(part, step)
 
         for point in [vm.O3D, 0.1*vm.X3D, 0.1*vm.Y3D, 0.1*vm.Z3D]:
             vp = self.part_local_point_global_speed(part, point, istep)
@@ -1113,14 +1125,14 @@ class MechanismConfigurations(DessiaObject):
                 else:
                     ql = []
 
-                part1_frame = self.mechanism.part_frame(linkage.part1,
+                part1_frame = self.mechanism.part_global_frame(linkage.part1,
                                                         step)
                 part_frames[linkage.part1] = part1_frame
     #
                 linkage_position1 = part1_frame.OldCoordinates(linkage.part1_position_function(ql))
                 linkage_position1_2D = linkage_position1.PlaneProjection2D(x, y)
 
-                part2_frame = self.mechanism.part_frame(linkage.part2,
+                part2_frame = self.mechanism.part_global_frame(linkage.part2,
                                                         step)
                 part_frames[linkage.part2] = part2_frame
     #
@@ -1181,14 +1193,14 @@ class MechanismConfigurations(DessiaObject):
                 for line in Part.wireframe_lines(points):
                     line.MPLPlot2D(x, y, ax, color=colors[part], width=5)
 
-                part_frame = self.mechanism.part_frame(part, step)
+                part_frame = self.mechanism.part_global_frame(part, step)
                 for point in part.interest_points:
                     x1, y1 = part_frame.OldCoordinates(point).PlaneProjection2D(x, y)
                     ax.plot([x1, xm], [y1, ym], color=colors[part])
 
 
                 if plot_frames:
-                    part_frame = self.mechanism.part_frame(part, step)
+                    part_frame = self.mechanism.part_global_frame(part, step)
                     part_frame.plot2d(x=x, y=y, ax=ax)
 
                 if plot_rotation_axis:
@@ -1315,7 +1327,7 @@ class MechanismConfigurations(DessiaObject):
 #            step_linkage_positions = []
             for part in self.mechanism.parts:
 
-                frame = round(self.mechanism.part_frame(part,
+                frame = round(self.mechanism.part_global_frame(part,
                                                   step))
 
                 step_positions.append(list(frame.origin))
