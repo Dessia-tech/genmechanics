@@ -82,6 +82,21 @@ class Linkage(DessiaObject):
                               number_kinematic_parameters=len(kinematic_parameters),
                               name=name)
                 
+    def equivalence_hash(self):
+        h = 0
+        if hasattr(self, 'part1_position'):
+            h += hash(self.part1_position)
+            
+        if hasattr(self, 'part2_position'):
+            h += hash(self.part2_position)
+            
+        if hasattr(self, 'part1_basis'):
+            h += hash(self.part1_basis)
+            
+        if hasattr(self, 'part2_basis'):
+            h += hash(self.part2_basis)
+            
+        return h
         
     def is_equivalent(self, other_linkage):
         if self.__class__ != other_linkage.__class__:
