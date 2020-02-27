@@ -58,6 +58,7 @@ class Linkage(DessiaObject):
                                     'part2_position_function',
                                     'part1_basis_function',
                                     'part2_basis_function']
+    
     def __init__(self,
                  part1, part1_position_function, part1_basis_function,
                  part2, part2_position_function, part2_basis_function,
@@ -80,6 +81,30 @@ class Linkage(DessiaObject):
                               kinematic_parameters=kinematic_parameters,
                               number_kinematic_parameters=len(kinematic_parameters),
                               name=name)
+                
+        
+    def is_equivalent(self, other_linkage):
+        if self.__class__ != other_linkage.__class__:
+            return False
+
+        if hasattr(self, 'part1_position'):
+            if self.part1_position != other_linkage.part1_position:
+                return False
+            
+        if hasattr(self, 'part2_position'):
+            if self.part2_position != other_linkage.part2_position:
+                return False
+            
+        if hasattr(self, 'part1_basis'):
+            if self.part1_basis != other_linkage.part1_basis:
+                return False
+            
+        if hasattr(self, 'part2_basis'):
+            if self.part2_basis != other_linkage.part2_basis:
+                return False
+            
+        return True
+        
 
 
     def frame(self, linkage_parameters_values, side):
@@ -149,8 +174,6 @@ class RevoluteLinkage(Linkage):
                          part2, lambda q: part2_position, part2_basis_f,
                          False, True,
                          [Parameter(0., 2*math.pi, 2*math.pi)], name=name)
-
-
 
 
 
