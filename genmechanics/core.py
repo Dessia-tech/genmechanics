@@ -27,7 +27,7 @@ class ModelError(Exception):
         return 'Model Error: ' + self.message
 
 class Part(DessiaObject):
-    _non_eq_attributes = ['name', 'interest_points']
+    _generic_eq = False
     
     def __init__(self, name='', interest_points=None):
         if interest_points is None:
@@ -36,7 +36,8 @@ class Part(DessiaObject):
             self.interest_points = interest_points
             
         self.name = name
-
+    
+        
     @classmethod
     def wireframe_lines(cls, points):
         if len(points) == 2:

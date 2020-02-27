@@ -48,7 +48,7 @@ mechanism = MovingMechanism([crank_ground, crank_rod, rod_piston, piston_ground]
 
 
 for initial_configuration in mechanism.find_configurations({0: 0.}, 10, number_starts=10):
-    frame_piston = mechanism.part_frame(piston, initial_configuration)
+    frame_piston = mechanism.part_global_frame(piston, initial_configuration)
     if frame_piston.origin[2] > 0:
         break
 
