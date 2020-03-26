@@ -82,6 +82,21 @@ class Linkage(DessiaObject):
                               number_kinematic_parameters=len(kinematic_parameters),
                               name=name)
                 
+    def equivalence_hash(self):
+        h = 0
+        if hasattr(self, 'part1_position'):
+            h += hash(self.part1_position)
+            
+        if hasattr(self, 'part2_position'):
+            h += hash(self.part2_position)
+            
+        if hasattr(self, 'part1_basis'):
+            h += hash(self.part1_basis)
+            
+        if hasattr(self, 'part2_basis'):
+            h += hash(self.part2_basis)
+            
+        return h
         
     def is_equivalent(self, other_linkage):
         if self.__class__ != other_linkage.__class__:
@@ -1286,7 +1301,7 @@ class MechanismConfigurations(DessiaObject):
         for part in self.mechanism.parts:
             meshes_string += 'var part_children = [];\n'
             lines = part.wireframe_lines(part_points[part])
-            meshes_string += lines[0].Babylon(name='part_parent', color=colors[part])
+            meshes_string += lines[0].babylon_script(name='part_parent', color=colors[part])
             meshes_string += 'parts_parent.push(part_parent);\n'
             for l in lines[1:]:
                 meshes_string += l.Babylon(color=colors[part], parent='part_parent')
@@ -1308,7 +1323,7 @@ class MechanismConfigurations(DessiaObject):
         if plot_instant_rotation_axis:
             for part in self.mechanism.parts:
                 line = vm.LineSegment3D(-0.5*vm.X3D, 0.5*vm.X3D)
-                meshes_string += line.Babylon(name='rotation_axis',  color=colors[part], type_='dashed')
+                meshes_string += line.babylon_script(name='rotation_axis',  color=colors[part], type_='dashed')
                 meshes_string += 'parts_parent.push(rotation_axis);\n'
 
 
