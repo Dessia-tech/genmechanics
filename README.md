@@ -9,18 +9,18 @@ This package beginned with a simple solving of mechanisms defined as parts linke
 
 Speeds and forces are solved in all the mechanism, enabling to compute power losses and efficiency of mechanisms
 
-![Sankey](https://github.com/Dessia-tech/genmechanics/tree/master/doc/source/images/sankey.png "Sankey diagram of simple gearbox")
+![Sankey](https://github.com/Dessia-tech/genmechanics/tree/master/doc/source/images/sankey.png)
 
 ### Unidimensional
 This module computes non-linear forces and linkage behaviors (unilateral contacts, non linear springs...) for mechanism with parts that have 1D motion.
 
-![unidimensional](https://github.com/Dessia-tech/genmechanics/tree/master/doc/source/images/unidimensional_ballbearings.png "Unidimensional model of two bearings in contact with transmitted loads between them")
+![unidimensional](https://github.com/Dessia-tech/genmechanics/tree/master/doc/source/images/unidimensional_ballbearings.png)
 
 ### Dynamic positions
 This is an update from core module where linkages positions are solved to find the mechanism configuration from some imposed linkages parameters.
 Mechanism can be rendered with a babylonjs binding.
 
-![crank_rod](https://github.com/Dessia-tech/genmechanics/tree/master/doc/source/images/crank_rod.png "Crank rod mechanism rendered in babylonjs")
+![crank_rod](https://github.com/Dessia-tech/genmechanics/tree/master/doc/source/images/crank_rod.png)
 
 
 ## Getting started
