@@ -219,7 +219,7 @@ class Mechanism:
 
         webbrowser.open('file://' + os.path.realpath('gm_graph_viz.html'))
 
-    def DrawPowerGraph(self):
+    def DrawPowerGraph(self,return_graph=False):
         """
         Draw graph with tulip
         """
@@ -258,16 +258,19 @@ class Mechanism:
 #        print(widths)
         widths=[6*w/max_widths for w in widths]
 #        edges[linkage,part]=e
-        plt.figure()
-        pos=nx.spring_layout(G)
-        nx.draw_networkx_nodes(G,pos,nodelist=self.linkages,node_color='grey')
-        nx.draw_networkx_nodes(G,pos,nodelist=self.parts)
-        nx.draw_networkx_nodes(G,pos,nodelist=self.unknown_static_loads,node_color='red')
-        nx.draw_networkx_nodes(G,pos,nodelist=self.known_static_loads,node_color='green')
-        nx.draw_networkx_nodes(G,pos,nodelist=self.parts,node_color='cyan')
-        nx.draw_networkx_labels(G,pos,labels)
-        nx.draw_networkx_edges(G,pos,edges,width=widths,edge_color='blue')
-        nx.draw_networkx_edges(G,pos)
+        if not return_graph:
+            plt.figure()
+            pos=nx.spring_layout(G)
+            nx.draw_networkx_nodes(G,pos,nodelist=self.linkages,node_color='grey')
+            nx.draw_networkx_nodes(G,pos,nodelist=self.parts)
+            nx.draw_networkx_nodes(G,pos,nodelist=self.unknown_static_loads,node_color='red')
+            nx.draw_networkx_nodes(G,pos,nodelist=self.known_static_loads,node_color='green')
+            nx.draw_networkx_nodes(G,pos,nodelist=self.parts,node_color='cyan')
+            nx.draw_networkx_labels(G,pos,labels)
+            nx.draw_networkx_edges(G,pos,edges,width=widths,edge_color='blue')
+            nx.draw_networkx_edges(G,pos)
+        else:
+            return G
 #        nx.draw_networkx_labels(G,pos,labels)
 
     def ChangeImposedSpeeds(self, imposed_speeds):
