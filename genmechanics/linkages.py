@@ -8,8 +8,16 @@ Created on Wed Nov 16 13:14:34 2016
 import numpy as npy
 from math import cos,sin
 import genmechanics.geometry as geometry
-
+from dessia_common import DessiaObject
 class Linkage:
+    _eq_is_data_eq=False
+    _non_serializable_attributes=['position','euler_angles',
+                 'static_matrix1', 'static_matrix2',
+                 'static_behavior_occurence_matrix',
+                 'static_behavior_nonlinear_eq_indices',
+                 'static_behavior_linear_eq',
+                 'static_behavior_nonlinear_eq',
+                 'static_require_kinematic','P','kinematic_matrix']
     def __init__(self,
                  part1, part2, position,
                  euler_angles,
@@ -19,6 +27,8 @@ class Linkage:
                  static_behavior_linear_eq,
                  static_behavior_nonlinear_eq,
                  static_require_kinematic,name=''):
+        
+       
         self.part1 = part1
         self.part2 = part2
         self.position = npy.array(position)
@@ -116,6 +126,8 @@ class FrictionlessRevoluteLinkage(HolonomicLinkage):
                                   static_matrix1,static_matrix2,static_behavior_occurence_matrix,
                                   static_behavior_nonlinear_eq_indices,static_behavior_linear_eq,
                                   static_behavior_nonlinear_eq,kinematic_matrix,static_require_kinematic,name)
+        # print(self.to_dict())
+        # print('EZA')
 
 class RevoluteLinkage(HolonomicLinkage):
     def __init__(self,part1,part2,position,euler_angles,Ca,Cr,Cw,name='Revolute Linkage'):

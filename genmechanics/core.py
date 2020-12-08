@@ -27,7 +27,8 @@ class ModelError(Exception):
         return 'Model Error: ' + self.message
 
 class Part(DessiaObject):
-    _generic_eq = False
+    _eq_is_data_eq=False
+    
     
     def __init__(self, name='', interest_points=None):
         if interest_points is None:
@@ -57,6 +58,7 @@ class Part(DessiaObject):
             return lines
 
 class Mechanism:
+    _eq_is_data_eq=False
     def __init__(self,
                  linkages,
                  ground,
@@ -465,6 +467,7 @@ class Mechanism:
         # Force kinematic computation if required
         if kinematic_analysis_required:
             self.kinematic_results
+            
 
         # Knowns loads sorting by parts
         loads_parts={}
