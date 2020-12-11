@@ -5,8 +5,9 @@ name: default
 
 steps:
 - name: install, build doc run scripts
-  image: python:3.7
+  image: python:3.8
   commands:
+  - pip install Cython
   - git fetch --tags 
   - python setup.py install
   - pip install sphinx sphinx_rtd_theme
@@ -18,12 +19,12 @@ steps:
   - python unidimensional/double_ball_bearings.py
 
 - name: develop
-  image: python:3.7
+  image: python:3.8
   commands:
   - python setup.py develop
 
 - name: sdist, bdist
-  image: python:3.7
+  image: python:3.8
   commands:
   - python setup.py sdist
   - python setup.py bdist
