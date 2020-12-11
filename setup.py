@@ -116,6 +116,5 @@ setup(name='genmechanics',
       include_package_data = True,
       packages=['genmechanics'],
       package_dir={'genmechanics': 'genmechanics'},
-      install_requires=['numpy', 'matplotlib', 'networkx', 'scipy',
-                        'volmdlr>=0.1.7', 'cma'],
+      install_requires=['numpy', 'matplotlib', 'networkx', 'scipy', 'cma'],
       classifiers=['Topic :: Scientific/Engineering','Development Status :: 3 - Alpha'])
