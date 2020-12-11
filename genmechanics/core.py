@@ -13,7 +13,7 @@ from scipy.optimize import fsolve
 from dessia_common import DessiaObject
 
 import volmdlr as vm
-
+import volmdlr.edges as edges
 
 import webbrowser
 import os
@@ -42,7 +42,7 @@ class Part(DessiaObject):
     @classmethod
     def wireframe_lines(cls, points):
         if len(points) == 2:
-            return [vm.LineSegment3D(points[0], points[1])]
+            return [edges.LineSegment3D(points[0], points[1])]
         else:
             lines = []
             full_graph = nx.Graph()
