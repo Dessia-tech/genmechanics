@@ -21,6 +21,7 @@ steps:
 - name: develop
   image: python:3.8
   commands:
+  - pip install Cython
   - python setup.py develop
 
 - name: sdist, bdist
