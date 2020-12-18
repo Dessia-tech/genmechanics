@@ -13,7 +13,7 @@ from scipy.optimize import fsolve
 from dessia_common import DessiaObject
 
 import volmdlr as vm
-
+import volmdlr.edges as edges
 
 import webbrowser
 import os
@@ -27,7 +27,8 @@ class ModelError(Exception):
         return 'Model Error: ' + self.message
 
 class Part(DessiaObject):
-    _generic_eq = False
+    _eq_is_data_eq=False
+    
     
     def __init__(self, name='', interest_points=None):
         if interest_points is None:
@@ -41,7 +42,7 @@ class Part(DessiaObject):
     @classmethod
     def wireframe_lines(cls, points):
         if len(points) == 2:
-            return [vm.LineSegment3D(points[0], points[1])]
+            return [edges.LineSegment3D(points[0], points[1])]
         else:
             lines = []
             full_graph = nx.Graph()
@@ -57,6 +58,7 @@ class Part(DessiaObject):
             return lines
 
 class Mechanism:
+    _eq_is_data_eq=False
     def __init__(self,
                  linkages,
                  ground,
@@ -219,7 +221,7 @@ class Mechanism:
 
         webbrowser.open('file://' + os.path.realpath('gm_graph_viz.html'))
 
-    def DrawPowerGraph(self):
+    def DrawPowerGraph(self,return_graph=False):
         """
         Draw graph with tulip
         """
@@ -258,16 +260,19 @@ class Mechanism:
 #        print(widths)
         widths=[6*w/max_widths for w in widths]
 #        edges[linkage,part]=e
-        plt.figure()
-        pos=nx.spring_layout(G)
-        nx.draw_networkx_nodes(G,pos,nodelist=self.linkages,node_color='grey')
-        nx.draw_networkx_nodes(G,pos,nodelist=self.parts)
-        nx.draw_networkx_nodes(G,pos,nodelist=self.unknown_static_loads,node_color='red')
-        nx.draw_networkx_nodes(G,pos,nodelist=self.known_static_loads,node_color='green')
-        nx.draw_networkx_nodes(G,pos,nodelist=self.parts,node_color='cyan')
-        nx.draw_networkx_labels(G,pos,labels)
-        nx.draw_networkx_edges(G,pos,edges,width=widths,edge_color='blue')
-        nx.draw_networkx_edges(G,pos)
+        if not return_graph:
+            plt.figure()
+            pos=nx.spring_layout(G)
+            nx.draw_networkx_nodes(G,pos,nodelist=self.linkages,node_color='grey')
+            nx.draw_networkx_nodes(G,pos,nodelist=self.parts)
+            nx.draw_networkx_nodes(G,pos,nodelist=self.unknown_static_loads,node_color='red')
+            nx.draw_networkx_nodes(G,pos,nodelist=self.known_static_loads,node_color='green')
+            nx.draw_networkx_nodes(G,pos,nodelist=self.parts,node_color='cyan')
+            nx.draw_networkx_labels(G,pos,labels)
+            nx.draw_networkx_edges(G,pos,edges,width=widths,edge_color='blue')
+            nx.draw_networkx_edges(G,pos)
+        else:
+            return G
 #        nx.draw_networkx_labels(G,pos,labels)
 
     def ChangeImposedSpeeds(self, imposed_speeds):
@@ -462,6 +467,7 @@ class Mechanism:
         # Force kinematic computation if required
         if kinematic_analysis_required:
             self.kinematic_results
+            
 
         # Knowns loads sorting by parts
         loads_parts={}

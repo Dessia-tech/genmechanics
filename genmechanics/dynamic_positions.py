@@ -59,6 +59,7 @@ class Linkage(DessiaObject):
                                     'part1_basis_function',
                                     'part2_basis_function']
     
+    
     def __init__(self,
                  part1, part1_position_function, part1_basis_function,
                  part2, part2_position_function, part2_basis_function,
@@ -173,7 +174,7 @@ class RevoluteLinkage(Linkage):
         """
 
         def part1_basis_f(q):
-            return part1_basis.Rotation(part1_basis.u, q[0], copy=True)
+            return part1_basis.rotation(part1_basis.u, q[0], copy=True)
 
         def part2_basis_f(q):
             return part2_basis
@@ -583,6 +584,7 @@ class MovingMechanism(Mechanism):
     def part_global_frame(self, part, kinematic_parameters_values):
         frame = vm.OXYZ
         for part1, linkage, linkage_side, part2 in self.settings_path(self.ground, part):
+            
             linkage_parameters_values = self.extract_linkage_parameters_values(linkage, kinematic_parameters_values)
             linkage_frame = linkage.frame(linkage_parameters_values, side=linkage_side)
             frame = frame + linkage_frame
@@ -612,17 +614,25 @@ class MovingMechanism(Mechanism):
 
 
     def extract_linkage_parameters_values(self, linkage, global_parameter_values):
+      
         linkage_parameters = [global_parameter_values[self.kinematic_parameters_mapping[linkage, i]]\
                for i in range(linkage.number_kinematic_parameters)]
         return linkage_parameters
+
+    def global_to_linkages_parameter_values(self, global_parameter_values):
+        linkages_parameter_values = {}
+        for linkage in self.linkages_kinematic_setting:
+            linkages_parameter_values[linkage] = self.extract_linkage_parameters_values(linkage, global_parameter_values)
+        return linkages_parameter_values
+            
 
     def opened_linkage_gap(self, linkage, global_parameter_values):
         if linkage.positions_require_kinematic_parameters:
             ql = self.extract_linkage_parameters_values(linkage, global_parameter_values)
         else:
             ql = []
-        position1 = self.part_global_frame(linkage.part1, global_parameter_values).OldCoordinates(linkage.part1_position_function(ql))
-        position2 = self.part_global_frame(linkage.part2, global_parameter_values).OldCoordinates(linkage.part2_position_function(ql))
+        position1 = self.part_global_frame(linkage.part1, global_parameter_values).old_coordinates(linkage.part1_position_function(ql))
+        position2 = self.part_global_frame(linkage.part2, global_parameter_values).old_coordinates(linkage.part2_position_function(ql))
         return position2 - position1
 
     def opened_linkage_misalignment(self, linkage, global_parameter_values):
@@ -636,7 +646,7 @@ class MovingMechanism(Mechanism):
     def opened_linkages_residue(self, q):
         residue = 0.
         for linkage in self.opened_linkages:
-            residue += self.opened_linkage_gap(linkage, q).Norm()
+            residue += self.opened_linkage_gap(linkage, q).norm()
         return residue
 
     def reduced_x_to_full_x(self, xr, basis_vector, free_parameters_dofs):
@@ -774,7 +784,7 @@ class MovingMechanism(Mechanism):
 
         n_steps = len(list(steps_imposed_parameters.values())[0])
 
-        qs = [x0]
+        linkage_steps_parameters = [self.global_to_linkages_parameter_values(x0)]
 
         number_failed_steps = 0
         failed_step = False
@@ -810,7 +820,9 @@ class MovingMechanism(Mechanism):
                     xr0 = xr_opt[:]
                     x = self.reduced_x_to_full_x(xr_opt, basis_vector, free_parameters_dofs)
 
-                    qs.append(x[:])
+
+                    # qs.append(x[:])
+                    linkage_steps_parameters.append(self.global_to_linkages_parameter_values(x))
                 else:
                     print('@istep {}: residue: {}'.format(istep, fopt))
                     number_failed_steps += 1
@@ -821,9 +833,11 @@ class MovingMechanism(Mechanism):
 
 
             else:
-                qs.append(basis_vector)
+                
+                linkage_steps_parameters.append(self.global_to_linkages_parameter_values(basis_vector))
+                # qs.append(basis_vector)
         if not failed_step:
-            return MechanismConfigurations(self,steps_imposed_parameters, qs)
+            return MechanismConfigurations(self,steps_imposed_parameters, linkage_steps_parameters)
 
 #    def solve_configurations(steps_imposed_parameters,
 #                             number_max_configurations)
@@ -907,15 +921,15 @@ class MechanismConfigurations(DessiaObject):
     def __init__(self,
                  mechanism,
                  steps_imposed_parameters,
-                 steps):
+                 linkage_steps_parameters):
 
-        number_steps = len(steps)
+        number_steps = len(linkage_steps_parameters)
 
 
         DessiaObject.__init__(self,
                               mechanism=mechanism,
                               steps_imposed_parameters=steps_imposed_parameters,
-                              steps=steps,
+                              linkage_steps_parameters=linkage_steps_parameters,
                               number_steps=number_steps)
 
         if not self.is_valid():
@@ -924,11 +938,11 @@ class MechanismConfigurations(DessiaObject):
         self.trajectories = {}
 
     def is_valid(self):
-        nparam_mechanism = len(self.mechanism.kinematic_parameters_mapping)
-        for istep, step in enumerate(self.steps):
-            if len(step) != nparam_mechanism:
-                print('Step n°{} has incorrect length'.format(istep))
-                return False
+        # nparam_mechanism = len(self.mechanism.kinematic_parameters_mapping)
+        # for istep, step in enumerate(self.steps):
+        #     if len(step) != nparam_mechanism:
+        #         print('Step n°{} has incorrect length'.format(istep))
+        #         return False
         return True
 
     def opened_linkages_residue(self):
@@ -958,11 +972,11 @@ class MechanismConfigurations(DessiaObject):
                                   ):
         x = []
         y = []
-        dof1 = self.mechanism.kinematic_parameters_mapping[linkage1, kinematic_parameter1]
-        dof2 = self.mechanism.kinematic_parameters_mapping[linkage2, kinematic_parameter2]
-        for step in self.steps:
-            x.append(step[dof1])
-            y.append(step[dof2])
+        # dof1 = self.mechanism.kinematic_parameters_mapping[linkage1, kinematic_parameter1]
+        # dof2 = self.mechanism.kinematic_parameters_mapping[linkage2, kinematic_parameter2]
+        for step in self.linkage_steps_parameters:
+            x.append(step[linkage1][kinematic_parameter1])
+            y.append(step[linkage2][kinematic_parameter2])
         fig, ax = plt.subplots()
         ax.plot(x, y, marker='o')
         ax.set_xlabel('Parameter {} of linkage {}'.format(kinematic_parameter1+1, linkage1.name))
@@ -1278,8 +1292,7 @@ class MechanismConfigurations(DessiaObject):
 
             for linkage in linkages:
                 if linkage.positions_require_kinematic_parameters:
-                    ql = self.mechanism.extract_linkage_parameters_values(linkage,
-                                                                          self.steps[0])
+                    ql = self.linkage_steps_parameters[0][linkage]
                 else:
                     ql = []
 
@@ -1322,7 +1335,7 @@ class MechanismConfigurations(DessiaObject):
 
         if plot_instant_rotation_axis:
             for part in self.mechanism.parts:
-                line = vm.LineSegment3D(-0.5*vm.X3D, 0.5*vm.X3D)
+                line = vm.edges.LineSegment3D(-0.5*vm.X3D, 0.5*vm.X3D)
                 meshes_string += line.babylon_script(name='rotation_axis',  color=colors[part], type_='dashed')
                 meshes_string += 'parts_parent.push(rotation_axis);\n'
 
@@ -1331,8 +1344,7 @@ class MechanismConfigurations(DessiaObject):
         for linkage in self.mechanism.linkages:
             if linkage not in self.mechanism.opened_linkages:
 
-                ql = self.mechanism.extract_linkage_parameters_values(linkage,
-                                                                      self.steps[0])
+                ql = self.linkage_steps_parameters[0][linkage]
             else:
                 ql = []
 
@@ -1357,14 +1369,14 @@ class MechanismConfigurations(DessiaObject):
         linkage_positions = []
 
         # n_steps = len(self.steps)
-
-        for istep, step in enumerate(self.steps):
+        print(self.linkage_steps_parameters)
+        for istep, step in enumerate(self.linkage_steps_parameters):
             step_positions = []
             step_orientations = []
             step_linkage_positions = []
 #            step_linkage_positions = []
             for part in self.mechanism.parts:
-
+                print(step)
                 frame = round(self.mechanism.part_global_frame(part,
                                                   step))
 
