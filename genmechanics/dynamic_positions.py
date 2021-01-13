@@ -19,14 +19,14 @@ from matplotlib.patches import Arrow
 
 import networkx as nx
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+# from jinja2 import Environment, PackageLoader, select_autoescape
 
 from dessia_common.core import DessiaObject
 #from numpy import zeros
 from scipy.optimize import minimize
 import volmdlr as vm
 from genmechanics.core import Part, Mechanism
-
+from genmechanics.templates import babylon_template
 
 class Parameter(DessiaObject):
     def __init__(self, lower_bound, upper_bound, periodicity=None):
@@ -614,7 +614,7 @@ class MovingMechanism(Mechanism):
 
 
     def extract_linkage_parameters_values(self, linkage, global_parameter_values):
-      
+        print(self.kinematic_parameters_mapping[linkage, 0])
         linkage_parameters = [global_parameter_values[self.kinematic_parameters_mapping[linkage, i]]\
                for i in range(linkage.number_kinematic_parameters)]
         return linkage_parameters
@@ -1276,10 +1276,6 @@ class MechanismConfigurations(DessiaObject):
 
         page+='.html'
 
-        env = Environment(loader=PackageLoader('genmechanics', 'templates'),
-                          autoescape=select_autoescape(['html', 'xml']))
-
-        template = env.get_template('babylon.html')
 
         np = len(self.mechanism.parts)
         colors = {p: hsv_to_rgb((ip / np, 0.78, 0.87)) for ip, p in enumerate(self.mechanism.parts)}
@@ -1387,12 +1383,6 @@ class MechanismConfigurations(DessiaObject):
 
 
             if plot_instant_rotation_axis:
-                # if istep == n_steps-1:
-                #     istep_speed = n_steps-2
-                #     # step_speed = self.steps[istep_speed]
-                # else:
-                #     istep_speed = istep
-                #     # step_speed = step
                 for part in self.mechanism.parts:
 
                     # print('unorm', u, u.Norm())
@@ -1412,8 +1402,7 @@ class MechanismConfigurations(DessiaObject):
                     step_orientations.append([list(u),
                                               list(v),
                                               list(w)])
-                    # print(step_positions)
-                    # print(step_orientations)
+
 
             for linkage in self.mechanism.linkages:
                 step_linkage_positions.append(list(self.mechanism.linkage_global_position(linkage, step)))
@@ -1429,20 +1418,17 @@ class MechanismConfigurations(DessiaObject):
         if plot_trajectories:
             for trajectory in self.trajectories.values():
                 trajectories.append([list(p) for p in trajectory])
-#            for point, part in self.mechanism.parts:
-#                for point in part.interest_points:
-#                    trajectories.append([list(p.vector) for p in self.trajectory(point, part, self.mechanism.ground)])
 
 
-        script = template.render(center=(0, 0, 0),
-                                 length=2*0.5,
-                                 meshes_string=meshes_string,
-                                 linkages_string=linkages_string,
-                                 positions=positions,
-                                 orientations=orientations,
-                                 linkage_positions=linkage_positions,
-                                 trajectories=trajectories,
-                                 use_cdn=use_cdn)
+        script = babylon_template.substitute(center=(0, 0, 0),
+                                             name=self.names,
+                                             length=2*0.5,
+                                             meshes_string=meshes_string,
+                                             linkages_string=linkages_string,
+                                             positions=positions,
+                                             orientations=orientations,
+                                             linkage_positions=linkage_positions,
+                                             trajectories=trajectories)
 
         with open(page,'w') as file:
             file.write(script)

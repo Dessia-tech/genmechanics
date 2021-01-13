@@ -15,9 +15,11 @@ from dessia_common import DessiaObject
 import volmdlr as vm
 import volmdlr.edges as edges
 
+from genmechanics.templates import babylon_template
+
 import webbrowser
 import os
-from jinja2 import Environment, PackageLoader, select_autoescape
+# from jinja2 import Environment, PackageLoader, select_autoescape
 
 class ModelError(Exception):
     def __init__(self, message):
@@ -896,10 +898,6 @@ class Mechanism:
 
     def BabylonScript(self,forces=True):
 
-        env = Environment(loader=PackageLoader('genmechanics', 'templates'),
-                          autoescape=select_autoescape(['html', 'xml']))
-
-        template = env.get_template('babylon.html')
 
         center,length=self.SceneCaracteristics()
 
@@ -937,14 +935,15 @@ class Mechanism:
                 pass
 
 
+        return babylon_template.substitute(linkages_strings=linkages_strings,
+                                           length=length,
+                                           center=center,
+                                           name=self.names)
 
 
-        return template.render(name=self.name,center=tuple(center),length=length,
-                               linkages_strings=linkages_strings)
 
-    def BabylonShow(self,page='gm_babylonjs',forces=True):
+    def BabylonShow(self,page='gm_babylonjs'):
         page+='.html'
-#        print(self.BabylonScript())
         with open(page,'w') as file:
             file.write(self.BabylonScript())
 
