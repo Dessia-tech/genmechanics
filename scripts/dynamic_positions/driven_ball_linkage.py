@@ -12,10 +12,10 @@ l = 0.15
 #h = 0.32
 
 ground = Part('Ground')
-arm = Part('Arm', interest_points=[vm.Point3D((0., 0., 1))])
+arm = Part('Arm', interest_points=[vm.Point3D(0., 0., 1)])
 
-arm_linkage = BallLinkage(ground, vm.Point3D((-0.07, 0.1, 0.12)), vm.XYZ,
-                           arm, vm.Point3D((0, 0, 0)), vm.XYZ,
+arm_linkage = BallLinkage(ground, vm.Point3D(-0.07, 0.1, 0.12), vm.XYZ,
+                           arm, vm.Point3D(0, 0, 0), vm.XYZ,
                            name='arm linkage')
 
 mechanism = MovingMechanism([arm_linkage],

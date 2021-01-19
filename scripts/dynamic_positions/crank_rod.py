@@ -60,7 +60,7 @@ configuration = mechanism.solve_from_initial_configuration(initial_configuration
 #configuration.plot2D(x=vm.x3D, y=vm.z3D, plot_frames=False)
 
 configuration.plot_kinematic_parameters(crank_ground, 0, piston_ground, 0)
-# configuration.babylonjs(plot_frames=True, plot_instant_rotation_axis=True)
+configuration.babylonjs(plot_frames=True, plot_instant_rotation_axis=True)
 
 # x = []
 # v1 = []

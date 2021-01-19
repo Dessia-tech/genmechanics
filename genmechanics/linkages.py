@@ -10,7 +10,6 @@ from math import cos,sin
 import genmechanics.geometry as geometry
 from dessia_common import DessiaObject
 class Linkage:
-    _eq_is_data_eq=False
     _non_serializable_attributes=['position','euler_angles',
                  'static_matrix1', 'static_matrix2',
                  'static_behavior_occurence_matrix',

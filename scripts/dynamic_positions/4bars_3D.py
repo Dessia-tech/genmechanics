@@ -8,8 +8,8 @@ import volmdlr as vm
 from genmechanics.dynamic_positions import Part, RevoluteLinkage, MovingMechanism
 
 ground = Part('ground')
-rod1 = Part('rod 1', interest_points=[vm.o3D])
-rod2 = Part('rod 2', interest_points=[vm.o3D])
+rod1 = Part('rod 1', interest_points=[vm.O3D])
+rod2 = Part('rod 2', interest_points=[vm.O3D])
 rod3 = Part('rod 3')
 
 l1 = 0.15
@@ -18,18 +18,18 @@ l3 = 0.16
 h = 0.17
 
 
-axis1 = vm.Vector3D((0.9, 0.2, 0))
-axis4 = vm.Vector3D((-0.2, 0.4, 0))
+axis1 = vm.Vector3D(0.9, 0.2, 0)
+axis4 = vm.Vector3D(-0.2, 0.4, 0)
 
-axis1.Normalize()
-axis4.Normalize()
+axis1.normalize()
+axis4.normalize()
 
-linkage1 = RevoluteLinkage(ground, vm.Point3D((-0.5*h, -0.3*h, 0)), vm.Basis3D.from_two_vectors(axis1, vm.y3D),
-                           rod1,  vm.Point3D((-0.5*l1, 0, 0)), vm.YZX, name='l1')
+linkage1 = RevoluteLinkage(ground, vm.Point3D(-0.5*h, -0.3*h, 0), vm.Basis3D.from_two_vectors(axis1, vm.Y3D),
+                           rod1,  vm.Point3D(-0.5*l1, 0, 0), vm.YZX, name='l1')
 
 
-linkage2 = RevoluteLinkage(rod2, vm.Point3D((-0.5*l2,0, 0)), vm.YZX,
-                           rod1, vm.Point3D((0.5*l1, 0, 0)), vm.YZX, name='l2')
+linkage2 = RevoluteLinkage(rod2, vm.Point3D(-0.5*l2,0, 0), vm.YZX,
+                           rod1, vm.Point3D(0.5*l1, 0, 0), vm.YZX, name='l2')
 #
 #linkage3 = RevoluteLinkage(rod3, vm.Point3D((-0.5*l3, 0, 0,)), vm.z3D,
 #                           rod2, vm.Point3D((0.5*l2,0, 0)), name='l3')
