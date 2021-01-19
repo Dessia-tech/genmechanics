@@ -19,7 +19,6 @@ from genmechanics.templates import babylon_template
 
 import webbrowser
 import os
-# from jinja2 import Environment, PackageLoader, select_autoescape
 
 class ModelError(Exception):
     def __init__(self, message):
