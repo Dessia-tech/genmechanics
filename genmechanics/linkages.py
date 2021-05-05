@@ -302,7 +302,9 @@ class FrictionLessGearSetLinkage(NonHolonomicLinkage):
         self.alpha=alpha# pressure angle
         self.beta=beta# hélix angle
         
+        
         static_matrix2=npy.array([[cos(beta)*cos(alpha),0],[sin(beta),0],[0,-1],[0,0],[0,0],[0,0]])
+        
         static_matrix1=-static_matrix2
         static_behavior_occurence_matrix=npy.array([[1,1]])
         static_behavior_nonlinear_eq_indices=[0]
