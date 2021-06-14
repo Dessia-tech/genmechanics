@@ -344,10 +344,14 @@ class Mechanism:
         :returns :Local forces of linkage on part given by its number (0 for part1, 1 for part2)
         """
         r=self.static_results[linkage]# results
+       
         vr=npy.array([r[i] for i in range(linkage.n_static_unknowns)])#vector of results
+       
         if num_part==0:
+           
             return npy.dot(linkage.static_matrix1,vr)
         else:
+         
             return npy.dot(linkage.static_matrix2,vr)
 
     def GlobalLinkageForces(self,linkage,num_part):
@@ -356,6 +360,7 @@ class Mechanism:
         F=npy.zeros(6)
         F[:3]=npy.dot(P,lf[:3])
         F[3:]=npy.dot(P,lf[3:])
+       
         return F
 
     def LocalLoadForces(self,load):
@@ -499,20 +504,22 @@ class Mechanism:
                     static_matrix=linkage.static_matrix1
                 else:
                     static_matrix=linkage.static_matrix2
-
+                
                 Me1=npy.abs(npy.dot(P,static_matrix[:3,:]))>1e-10
                 Me2=npy.abs(npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:]))>1e-10
                 Me=npy.vstack([Me1,Me2])
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     M[ip*6:(ip+1)*6,ndof]+=Me[:,indof]
-
-
+                
+                
                 Ke1=npy.dot(P,static_matrix[:3,:])
                 Ke2=npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:])
                 Ke=npy.vstack([Ke1,Ke2])
+               
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     K[ip*6:(ip+1)*6,ndof]+=Ke[:,indof]
-
+               
+            
 
             # Unknowns loads contribution to the LHS
             try:
@@ -565,7 +572,7 @@ class Mechanism:
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     Me[:,ndof]+=linkage.static_behavior_occurence_matrix[:,indof]
                 M=npy.vstack([M,Me])
-
+               
                 # Adding linear equations to System matrix K
                 neq_linear_linkage=linkage.static_behavior_linear_eq.shape[0]
                 if neq_linear_linkage>0:
@@ -622,6 +629,7 @@ class Mechanism:
                     for indof,ndof in enumerate(self.sdof[load]):
                         Ke[neq_linear:neq_linear+6,ndof]+=load.static_behavior_linear_eq[:,indof]
                     K=npy.vstack([K,Ke])
+                    
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_load))
 
                 # Collecting non linear equations
@@ -645,6 +653,8 @@ class Mechanism:
 #        print(resolution_order)
         if not solvable:
             raise ModelError('Overconstrained system')
+        
+        
         for eqs,variables in resolution_order:
 #            print(eqs,variables)
             linear=True
@@ -660,14 +670,19 @@ class Mechanism:
                 other_vars=npy.array([i for i in range(self.n_sdof) if i not in variables])
                 Kr=K[eqs_r[:,None],npy.array(variables)]
                 Fr=F[eqs_r]-npy.dot(K[eqs_r[:,None],other_vars],q[other_vars])
-
+               
                 q[variables]=linalg.solve(Kr,Fr)
+                
+                
             else:
+               
                 nl_eqs=[]
                 other_vars=npy.array([i for i in range(self.n_sdof) if i not in variables])
+                # print(eqs)
                 for eq in eqs:
                     try:
                         f1=nonlinear_eq[eq]
+                        
                         vars_func=[i for i in range(self.n_sdof) if M[eq,i]]
                         def f2(x,f1=f1,vars_func=vars_func,variables=variables,q=q):
                             x2=[]
@@ -676,17 +691,26 @@ class Mechanism:
                                     x2.append(x[variables.index(variable)])
                                 except ValueError:
                                     x2.append(q[variable])
+                            
                             return f1(x2)
                         nl_eqs.append(f2)
                     except KeyError:
                         # lambdification of linear equations
                         f2=lambda x,indices_r=indices_r,K=K,F=F,eq=eq,q=q,other_vars=other_vars:npy.dot(K[indices_r[eq],variables],x)-F[indices_r[eq]]+npy.dot(K[indices_r[eq],other_vars],q[other_vars])
+                       
+                        
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
                 xs=fsolve(f,npy.zeros(len(variables)),full_output=0)
+              
                 if npy.sum(npy.abs(f(xs)))>1e-4:
+                    
                     raise ModelError('No convergence of nonlinear phenomena solving'+str(npy.sum(npy.abs(f(xs)))))
+                
                 q[variables]=xs
+                
+                
+                
 
 
         results={}
@@ -695,7 +719,8 @@ class Mechanism:
             for idof,dof in enumerate(dofs):
                 rlink[idof]=q[dof]
             results[link]=rlink
-
+        
+     
         return results
 
     def _KinematicAnalysis(self):
