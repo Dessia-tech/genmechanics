@@ -34,6 +34,7 @@ def TransferMatrix2Euler(R):
         theta=math.acos(R[2,2])
         psi=math.atan2(R[2,0]/math.sin(theta),R[2,1]/math.sin(theta))
         phi=math.atan2(R[0,2]/math.sin(theta),-R[1,2]/math.sin(theta))
+
     else:
         phi=0
         if R[2,2]==1:

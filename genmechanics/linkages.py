@@ -6,7 +6,7 @@ Created on Wed Nov 16 13:14:34 2016
 """
 
 import numpy as npy
-from math import cos,sin
+from math import cos,sin,tan
 import genmechanics.geometry as geometry
 from dessia_common import DessiaObject
 class Linkage:
@@ -303,7 +303,7 @@ class FrictionLessGearSetLinkage(NonHolonomicLinkage):
         self.beta=beta# hélix angle
         
         
-        static_matrix2=npy.array([[cos(beta)*cos(alpha),0],[sin(beta),0],[0,-1],[0,0],[0,0],[0,0]])
+        static_matrix2=npy.array([[1,0],[tan(beta),0],[tan(alpha)/cos(beta),0],[0,0],[0,0],[0,0]])
         
         static_matrix1=-static_matrix2
         static_behavior_occurence_matrix=npy.array([[1,1]])

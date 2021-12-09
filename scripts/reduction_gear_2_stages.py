@@ -73,8 +73,8 @@ bearing3a=linkages.BallLinkage(ground,shaft3,p3a,[0,0,0],Ca,Cr,Cwb,'bearing3a')
 bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,Cwb,'bearing3b')
 
 
-gearset12=linkages.GearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,Cf,Cvgs,'Gear set 1')
-gearset23=linkages.GearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,Cf,Cvgs,'Gear set 2')
+gearset12=linkages.FrictionLessGearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,'Gear set 1')
+gearset23=linkages.FrictionLessGearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,'Gear set 2')
 
 load1=loads.KnownLoad(shaft1,[-Lb/2,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
 load2=loads.SimpleUnknownLoad(shaft3,[2*(Lgs+Lb),y2,z2],[0,0,0],[],[0],'output torque')
