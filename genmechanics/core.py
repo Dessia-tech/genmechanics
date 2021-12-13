@@ -346,10 +346,10 @@ class Mechanism:
         r=self.static_results[linkage]# results
         vr=npy.array([r[i] for i in range(linkage.n_static_unknowns)])#vector of results
         if num_part==0:
-            return npy.dot(list(linkage.static_matrix1),list(vr))
+            return npy.dot(linkage.static_matrix1,vr)
         else:
          
-            return npy.dot(list(linkage.static_matrix2),list(vr))
+            return npy.dot(linkage.static_matrix2,vr)
 
     def GlobalLinkageForces(self,linkage,num_part):
         P=geometry.Euler2TransferMatrix(*linkage.euler_angles)
