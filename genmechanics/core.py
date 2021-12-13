@@ -345,9 +345,6 @@ class Mechanism:
         """
         r=self.static_results[linkage]# results
         vr=npy.array([r[i] for i in range(linkage.n_static_unknowns)])#vector of results
-        print(vr)
-        print(linkage.static_matrix1)
-        print(npy.dot(list(linkage.static_matrix1),list(vr)))
         if num_part==0:
             return npy.dot(list(linkage.static_matrix1),list(vr))
         else:
@@ -357,11 +354,9 @@ class Mechanism:
     def GlobalLinkageForces(self,linkage,num_part):
         P=geometry.Euler2TransferMatrix(*linkage.euler_angles)
         lf=self.LocalLinkageForces(linkage,num_part)
-        print(P)
         F=npy.zeros(6)
         F[:3]=npy.dot(P,lf[:3])
         F[3:]=npy.dot(P,lf[3:])
-        print(F)
         return F
 
     def LocalLoadForces(self,load):
@@ -500,39 +495,25 @@ class Mechanism:
                 P=geometry.Euler2TransferMatrix(*linkage.euler_angles)
                 u=linkage.position
                 uprime=u
-                print(u)
                 L=geometry.CrossProductMatrix(uprime)
                 if part==linkage.part1:
                     static_matrix=linkage.static_matrix1
                 else:
                     static_matrix=linkage.static_matrix2
-                print(linkage.name)
-                print(static_matrix)
-                print(L)
                 Me1=npy.abs(npy.dot(P,static_matrix[:3,:]))>1e-10
-                print(npy.dot(P,static_matrix[:3,:]))
-                print(Me1)
                 Me2=npy.abs(npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:]))>1e-10
-                print(Me2)
+
                 Me=npy.vstack([Me1,Me2])
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     M[ip*6:(ip+1)*6,ndof]+=Me[:,indof]
-                
-                print(M)
-                print(P)
-                Ke1=npy.dot(P,static_matrix[:3,:])
-                print(Ke1)
-                Ke2=npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:])
-                print(npy.dot(P,static_matrix[:3,:]))
 
-                print(npy.dot(L,npy.dot(P,static_matrix[:3,:])))
-                print(npy.dot(P,static_matrix[3:,:]))
-                print(Ke2)
+                Ke1=npy.dot(P,static_matrix[:3,:])
+                Ke2=npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:])
+
                 Ke=npy.vstack([Ke1,Ke2])
 
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     K[ip*6:(ip+1)*6,ndof]+=Ke[:,indof]
-                    print(K[ip*6:(ip+1)*6,ndof])
 
                
             
@@ -597,12 +578,10 @@ class Mechanism:
                     for indof,ndof in enumerate(self.sdof[linkage]):
                         Ke[neq_linear:neq_linear+6,ndof]+=linkage.static_behavior_linear_eq[:,indof]
                     K=npy.vstack([K,Ke])
-                    print(linkage.name)
-                    print(K)
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_linkage))
 
                 # Collecting non linear equations
-#                print(v)
+
                 if linkage.holonomic:
                     if linkage.static_require_kinematic:
                         # Relatives speed in this case
@@ -613,9 +592,6 @@ class Mechanism:
                         w,v=0,0
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
-                        print(9999999 )
-                        print(neq+i)
-                        print(w)
                 else:
                     if linkage.static_require_kinematic:
                         # Absolute speed in this case in local coordinate system
@@ -627,9 +603,6 @@ class Mechanism:
 
                     for i,fct in zip(linkage.static_behavior_nonlinear_eq_indices,linkage.static_behavior_nonlinear_eq):
                         nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
-                        print(3333333333333)
-                        print(neq + i)
-                        print(w)
 
                 # Updating counters
                 neq+=neq_linkage
@@ -668,9 +641,6 @@ class Mechanism:
                     w,v=0,0
                 for i,fct in zip(load.static_behavior_nonlinear_eq_indices,load.static_behavior_nonlinear_eq):
                     nonlinear_eq[neq+i]=lambda x,v=v,w=w,fct=fct:fct(x,w,v)
-                    print(2111000111)
-                    print(neq + i)
-                    print(w)
 
                 # Updating counters
                 neq+=neq_load
@@ -686,9 +656,6 @@ class Mechanism:
         for eqs,variables in resolution_order:
 #            print(eqs,variables)
             linear=True
-            print(eqs)
-            print(variables)
-            print(2556)
             linear_eqs=[]
             for eq in eqs:
                 try:
@@ -710,13 +677,9 @@ class Mechanism:
                
                 nl_eqs=[]
                 other_vars=npy.array([i for i in range(self.n_sdof) if i not in variables])
-                print(eqs)
-                print(251111111111111)
                 for eq in eqs:
-                    print(eq)
                     try:
                         f1=nonlinear_eq[eq]
-                        print(598999)
                         vars_func=[i for i in range(self.n_sdof) if M[eq,i]]
                         def f2(x,f1=f1,vars_func=vars_func,variables=variables,q=q):
                             x2=[]
@@ -725,19 +688,12 @@ class Mechanism:
                                     x2.append(x[variables.index(variable)])
                                 except ValueError:
                                     x2.append(q[variable])
-                            print(variables)
-                            print(vars_func)
-                            print(x2)
                             return f1(x2)
                         nl_eqs.append(f2)
                     except KeyError:
                         # lambdification of linear equations
 
                         f2=lambda x,indices_r=indices_r,K=K,F=F,eq=eq,q=q,other_vars=other_vars:npy.dot(K[indices_r[eq],variables],x)-F[indices_r[eq]]+npy.dot(K[indices_r[eq],other_vars],q[other_vars])
-                        print(other_vars)
-                        print(variables)
-                        print(F[indices_r[eq]]+npy.dot(K[indices_r[eq],other_vars],q[other_vars]))
-                        print(K[indices_r[eq],variables])
                         
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
@@ -747,11 +703,8 @@ class Mechanism:
                     
                     raise ModelError('No convergence of nonlinear phenomena solving'+str(npy.sum(npy.abs(f(xs)))))
 
-                print(q)
-                print(xs)
-                print(variables)
                 q[variables]=xs
-                print(q)
+
                 
                 
                 
@@ -935,11 +888,8 @@ class Mechanism:
     def plot(self, u=1):
         points=[]
         for linkage in self.linkages:
-            print(linkage.name)
-            print(linkage.position)
             points.append(vm.Point3D(linkage.position[0],linkage.position[1],linkage.position[2]))
             list_result=linkage.position+u*linkage.P[:,0]
-            print(list_result)
             points.append(vm.edges.Line3D(vm.Point3D(linkage.position[0],linkage.position[1],linkage.position[2]),vm.Point3D(list_result[0],list_result[1],list_result[2])))
         mdl=vm.core.VolumeModel(points)
         mdl.plot(equal_aspect=False)

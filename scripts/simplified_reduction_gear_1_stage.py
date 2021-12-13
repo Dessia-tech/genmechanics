@@ -9,6 +9,7 @@ Created on Sat Dec 24 10:50:15 2016
 
 import genmechanics
 import genmechanics.linkages as linkages
+import genmechanics.loads as loads
 import numpy as npy
 
 L=0.2
@@ -19,6 +20,9 @@ W=300
 
 Ca=0.0008
 Cr=0.0006
+
+alpha_gs1=18/360*2*3.1415
+beta_gs1=0
 
 ground=genmechanics.Part('ground')
 shaft1=genmechanics.Part('shaft1')
@@ -32,17 +36,18 @@ p2b=npy.array([L,e1,0])
 pgs1=0.5*(p1a+p1b)*r1+(1-r1)*0.5*(p2a+p2b)
 
 dgs1=npy.cross(p1b-p1a,p2a-p1a)
-egs1=genmechanics.geometry.Direction2Euler(*dgs1)
+# egs1=genmechanics.geometry.Direction2Euler(*dgs1)
 
 bearing1=linkages.FrictionlessRevoluteLinkage(ground,shaft1,p1a,[0,0,0],'bearing1a')
 #bearing1=linkages.LinearAnnularLinkage(ground,shaft1,p1b,[0,0,0],Cr,'bearing1b')
 bearing2=linkages.FrictionlessRevoluteLinkage(ground,shaft2,p2a,[0,0,0],'bearing2a')
 #bearing2b=linkages.LinearAnnularLinkage(ground,shaft2,p2b,[0,0,0],Cr,'bearing2b')
 
-gearset12=linkages.FrictionlessGearSetLinkage(shaft1,shaft2,pgs1,egs1,'Gear set 2')
+gearset12=linkages.FrictionlessGearSetLinkage(shaft1,shaft2,pgs1,radial_vector=p2a-p1a,axial_vector=p1b-p1a,
+                                              pressure_angle=alpha_gs1, helix_angle=beta_gs1, name = 'Gear set 2')
 
-load1=genmechanics.KnownMechanicalLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
-load2=genmechanics.UnknownMechanicalLoad(shaft2,[L/2,0,0],[0,0,0],[],[0],'output torque')
+load1=loads.KnownLoad(shaft1,[-L/4,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
+load2=loads.SimpleUnknownLoad(shaft2,[L/2,0,0],[0,0,0],[],[0],'output torque')
 imposed_speeds=[(bearing1,0,W)]
 
 mech=genmechanics.Mechanism([bearing1,bearing2,gearset12],ground,imposed_speeds,[load1],[load2])

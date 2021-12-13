@@ -27,7 +27,7 @@ Cwb=0.# Speed coeff for bearings
 Cvgs=0.0001# Speed coeff for gear sets
 
 alpha_gs1=18/360*2*3.1415
-beta_gs1=0
+beta_gs1=25/360*2*3.1415
 
 ground=genmechanics.Part('ground')
 shaft1=genmechanics.Part('shaft1')
@@ -55,7 +55,8 @@ dir_axis=npy.array([1,0,0])
 dgs1=npy.cross(p1b-p1a, p2a-p1a)
 dgs1 = [0, 1, 0]
 egs1=genmechanics.geometry.Direction2Euler(dgs1,[0,0,1])
-gearset12=linkages.FrictionLessGearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1  ,'Gear set 1')
+gearset12=linkages.GearSetLinkage(shaft1, shaft2, pgs1, radial_vector=p2a-p1a, axial_vector=dir_axis,
+                                  pressure_angle=alpha_gs1, helix_angle=beta_gs1,Cf=Cf, Cv=Cvgs, name='Gear set 1')
 #gearset23=linkages.GearSetLinkage(shaft2,shaft3,[3*L/2,e1*r1+(e1+e2)*(1-r1),0],dir23)
 
 imposed_speeds=[(bearing1a,0,w)]
@@ -76,4 +77,4 @@ for l,r in mech.static_results.items():
 print('Cth: ',-r1/(1-r1)*C)
 
 
-# mech.GlobalSankey()
+mech.GlobalSankey()
