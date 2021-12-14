@@ -16,8 +16,8 @@ Lb=0.2# bearing width
 Lgs=0.045# Gearset width
 
 
-C=300
-w=300
+C=-300
+w=-300
 r1=0.048
 r2=0.047
 y2=0.078
