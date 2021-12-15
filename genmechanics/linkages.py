@@ -302,9 +302,9 @@ class FrictionlessGearSetLinkage(NonHolonomicLinkage):
         self.pressure_angle = pressure_angle# pressure angle
         self.helix_angle = helix_angle
         
-        transversal_vector = npy.cross(radial_vector, axial_vector)
+        transversal_vector = npy.cross(axial_vector,radial_vector)
         euler_angles = geometry.Direction2Euler(transversal_vector, axial_vector)
-        static_matrix2 = npy.array([[1, 0], [tan(helix_angle), 0], [0, 1], [0, 0], [0, 0], [0, 0]])
+        static_matrix2 = npy.array([[1, 0], [tan(helix_angle), 0], [0, -1], [0, 0], [0, 0], [0, 0]])
         
         static_matrix1 = -static_matrix2
         static_behavior_occurence_matrix = npy.array([[1,1]])
@@ -322,7 +322,7 @@ class FrictionlessGearSetLinkage(NonHolonomicLinkage):
     def ChangeParameters(self,pressure_angle,helix_angle):
         self.pressure_angle = pressure_angle
         self.helix_angle = helix_angle
-        self.static_matrix2 = npy.array([[1, 0], [tan(helix_angle), 0], [0, 1], [0, 0], [0, 0], [0, 0]])
+        self.static_matrix2 = npy.array([[1, 0], [tan(helix_angle), 0], [0, -1], [0, 0], [0, 0], [0, 0]])
         self.static_matrix1 = - self.static_matrix2
         self.static_behavior_nonlinear_eq = [lambda x, w, v:tan(pressure_angle)*abs(x[0])/cos(helix_angle) + x[1]]
 
@@ -338,11 +338,11 @@ class GearSetLinkage(NonHolonomicLinkage):
         self.Cf = Cf # force coefficient
         self.Cv = Cv # Speed coefficient
 
-        transversal_vector = npy.cross(radial_vector, axial_vector)
+        transversal_vector = npy.cross(axial_vector, radial_vector)
         euler_angles = geometry.Direction2Euler(transversal_vector, axial_vector)
         
-        static_matrix2 = npy.array([[1, 0, 0], [tan(helix_angle), 0, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0], [0, 0 , 0]])
-        static_matrix1 = npy.array([[0, 1, 0], [0, tan(helix_angle), 0], [0, 0, -1], [0, 0, 0], [0, 0, 0 ], [0, 0, 0]])
+        static_matrix2 = npy.array([[1, 0, 0], [tan(helix_angle), 0, 0], [0, 0, -1], [0, 0, 0], [0, 0, 0], [0, 0 , 0]])
+        static_matrix1 = npy.array([[0, 1, 0], [0, tan(helix_angle), 0], [0, 0, 1], [0, 0, 0], [0, 0, 0 ], [0, 0, 0]])
         static_behavior_occurence_matrix = npy.array([[1, 1, 1], [1, 1, 0]])
         static_behavior_nonlinear_eq_indices = [0, 1]
         static_behavior_linear_eq = npy.array([])
@@ -388,8 +388,8 @@ class GearSetLinkage(NonHolonomicLinkage):
     def ChangeParameters(self, pressure_angle, helix_angle):
         self.pressure_angle = pressure_angle
         self.helix_angle = helix_angle
-        self.static_matrix2 = npy.array([[1, 0, 0], [tan(helix_angle), 0, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0], [0, 0 , 0]])
-        self.static_matrix1 = npy.array([[0, 1, 0], [0, tan(helix_angle), 0], [0, 0, -1], [0, 0, 0], [0, 0, 0 ], [0, 0, 0]])
+        self.static_matrix2 = npy.array([[1, 0, 0], [tan(helix_angle), 0, 0], [0, 0, -1], [0, 0, 0], [0, 0, 0], [0, 0 , 0]])
+        self.static_matrix1 = npy.array([[0, 1, 0], [0, tan(helix_angle), 0], [0, 0, 1], [0, 0, 0], [0, 0, 0 ], [0, 0, 0]])
         
         self.static_behavior_nonlinear_eq=self.UpdateBehavior()
 
