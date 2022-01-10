@@ -20,7 +20,7 @@ class KnownLoad:
         self.torques=array(torques)
         self.name=name
         
-        self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
+        self.P= geometry.euler_2_transfer_matrix(,
         
 class UnknownLoad:
     """
@@ -47,7 +47,7 @@ class UnknownLoad:
 
         self.name=name
 #        print(euler_angles)
-        self.P=geometry.Euler2TransferMatrix(*self.euler_angles) 
+        self.P= geometry.euler_2_transfer_matrix(,
         self.n_static_unknowns=self.static_matrix.shape[1]
 
 
