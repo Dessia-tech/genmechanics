@@ -28,7 +28,6 @@ steps:
   image: python:3.8
   commands:
   - python setup.py sdist
-  - python setup.py bdist
 
 - name: upload to pypi
   image: plugins/pypi

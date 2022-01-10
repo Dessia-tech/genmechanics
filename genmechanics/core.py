@@ -348,6 +348,7 @@ class Mechanism:
         if num_part==0:
             return npy.dot(linkage.static_matrix1,vr)
         else:
+         
             return npy.dot(linkage.static_matrix2,vr)
 
     def GlobalLinkageForces(self,linkage,num_part):
@@ -499,20 +500,23 @@ class Mechanism:
                     static_matrix=linkage.static_matrix1
                 else:
                     static_matrix=linkage.static_matrix2
-
                 Me1=npy.abs(npy.dot(P,static_matrix[:3,:]))>1e-10
                 Me2=npy.abs(npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:]))>1e-10
+
                 Me=npy.vstack([Me1,Me2])
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     M[ip*6:(ip+1)*6,ndof]+=Me[:,indof]
 
-
                 Ke1=npy.dot(P,static_matrix[:3,:])
                 Ke2=npy.dot(L,npy.dot(P,static_matrix[:3,:]))+npy.dot(P,static_matrix[3:,:])
+
                 Ke=npy.vstack([Ke1,Ke2])
+
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     K[ip*6:(ip+1)*6,ndof]+=Ke[:,indof]
 
+               
+            
 
             # Unknowns loads contribution to the LHS
             try:
@@ -535,6 +539,7 @@ class Mechanism:
                 Ke=npy.vstack([Ke1,Ke2])
                 for indof,ndof in enumerate(self.sdof[load]):
                     K[ip*6:(ip+1)*6,ndof]=Ke[:,indof]     # minus because of sum is in LHS
+
 
 
             # knowns loads contribution to the RHS
@@ -565,7 +570,7 @@ class Mechanism:
                 for indof,ndof in enumerate(self.sdof[linkage]):
                     Me[:,ndof]+=linkage.static_behavior_occurence_matrix[:,indof]
                 M=npy.vstack([M,Me])
-
+               
                 # Adding linear equations to System matrix K
                 neq_linear_linkage=linkage.static_behavior_linear_eq.shape[0]
                 if neq_linear_linkage>0:
@@ -576,7 +581,7 @@ class Mechanism:
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_linkage))
 
                 # Collecting non linear equations
-#                print(v)
+
                 if linkage.holonomic:
                     if linkage.static_require_kinematic:
                         # Relatives speed in this case
@@ -622,6 +627,7 @@ class Mechanism:
                     for indof,ndof in enumerate(self.sdof[load]):
                         Ke[neq_linear:neq_linear+6,ndof]+=load.static_behavior_linear_eq[:,indof]
                     K=npy.vstack([K,Ke])
+                    
                     indices_r.extend(range(neq_linear,neq_linear+neq_linear_load))
 
                 # Collecting non linear equations
@@ -645,6 +651,8 @@ class Mechanism:
 #        print(resolution_order)
         if not solvable:
             raise ModelError('Overconstrained system')
+        
+        
         for eqs,variables in resolution_order:
 #            print(eqs,variables)
             linear=True
@@ -662,7 +670,11 @@ class Mechanism:
                 Fr=F[eqs_r]-npy.dot(K[eqs_r[:,None],other_vars],q[other_vars])
 
                 q[variables]=linalg.solve(Kr,Fr)
+
+                
+                
             else:
+               
                 nl_eqs=[]
                 other_vars=npy.array([i for i in range(self.n_sdof) if i not in variables])
                 for eq in eqs:
@@ -680,13 +692,22 @@ class Mechanism:
                         nl_eqs.append(f2)
                     except KeyError:
                         # lambdification of linear equations
+
                         f2=lambda x,indices_r=indices_r,K=K,F=F,eq=eq,q=q,other_vars=other_vars:npy.dot(K[indices_r[eq],variables],x)-F[indices_r[eq]]+npy.dot(K[indices_r[eq],other_vars],q[other_vars])
+                        
                         nl_eqs.append(f2)
                 f=lambda x:[fi(x) for fi in nl_eqs]
                 xs=fsolve(f,npy.zeros(len(variables)),full_output=0)
+              
                 if npy.sum(npy.abs(f(xs)))>1e-4:
+                    
                     raise ModelError('No convergence of nonlinear phenomena solving'+str(npy.sum(npy.abs(f(xs)))))
+
                 q[variables]=xs
+
+                
+                
+                
 
 
         results={}
@@ -695,7 +716,8 @@ class Mechanism:
             for idof,dof in enumerate(dofs):
                 rlink[idof]=q[dof]
             results[link]=rlink
-
+        
+     
         return results
 
     def _KinematicAnalysis(self):
@@ -760,6 +782,8 @@ class Mechanism:
                         K[6*il:6*il+6,ndof]+=Ke[:,indof]
 
         # Non holonomic equations
+
+
         for linkage in nhl:
             # Speed computation
             try:
@@ -806,7 +830,6 @@ class Mechanism:
 
         # deducing M from K for last lines
         M[6*ll:, :] = npy.abs(K[6*ll:, :]) > 1e-10
-
         solvable, solvable_var, resolution_order = tools.EquationsSystemAnalysis(M, None)
 
         if solvable:
@@ -851,6 +874,7 @@ class Mechanism:
                 orientations.append(-1)
                 labels.append(linkage.name)
 #            pl.append(0.5*l)
+        
         l = max([abs(f) for f in flows])
 #        pl=[0.1*l]*len(flows)
 
@@ -861,13 +885,14 @@ class Mechanism:
 
         sankey.finish()
 
-    def VMPlot(self, u=1):
+    def plot(self, u=1):
         points=[]
         for linkage in self.linkages:
-            points.append(vm.Point3D(linkage.position))
-            points.append(vm.Line3D(vm.Point3D(linkage.position),vm.Point3D(linkage.position+u*linkage.P[:,0])))
-        mdl=vm.VolumeModel(points)
-        mdl.MPLPlot()
+            points.append(vm.Point3D(linkage.position[0],linkage.position[1],linkage.position[2]))
+            list_result=linkage.position+u*linkage.P[:,0]
+            points.append(vm.edges.Line3D(vm.Point3D(linkage.position[0],linkage.position[1],linkage.position[2]),vm.Point3D(list_result[0],list_result[1],list_result[2])))
+        mdl=vm.core.VolumeModel(points)
+        mdl.plot(equal_aspect=False)
 
     def SceneCaracteristics(self):
         min_vect=self.linkages[0].position.copy()
@@ -937,11 +962,11 @@ class Mechanism:
         return babylon_template.substitute(linkages_strings=linkages_strings,
                                            length=length,
                                            center=center,
-                                           name=self.names)
+                                           name=self.name)
 
 
 
-    def BabylonShow(self,page='gm_babylonjs'):
+    def babylonjs(self,page='gm_babylonjs'):
         page+='.html'
         with open(page,'w') as file:
             file.write(self.BabylonScript())

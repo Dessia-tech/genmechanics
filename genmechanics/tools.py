@@ -16,8 +16,7 @@ def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
     
     if vars_to_solve==None:
         vars_to_solve=range(Mo.shape[1])
-    
-    
+
     neq,nvar=Mo.shape
     G=nx.Graph()
     Gp=nx.DiGraph()
@@ -65,13 +64,15 @@ def EquationsSystemAnalysis(Mo,vars_to_solve,overconstrain_stop=True):
             sources.append(node)
     
     G2=sources[:]
+
     for node in sources:
         for node2 in nx.descendants(Gp,node):
             if node2 not in G2:
                 G2.append(node2)
-    
+
     if overconstrain_stop:
         if G2!=[]:
+
 #            print('G2 (sur-contraint): ',G2)
 #            eG2=[int(elem[1:]) for elem in G2 if elem[0]=='e']
 #            vG2=[int(elem[1:]) for elem in G2 if elem[0]=='v']

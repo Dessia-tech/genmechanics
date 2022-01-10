@@ -139,11 +139,15 @@ class UnilateralContact(Linkage):
         
     def ActivationCondition(self, positions, reactions):
 #        print('act', self.name, p, (p[1] - p[0]) < self.contact_distance)
+        
+        
+        
         return (positions[1] - positions[0]) <= self.contact_distance-1e-8
 
     def DesactivationCondition(self, positions, reactions):        
 #        print('dis', self.name, r, r < -1e-10)
-        return reactions[0] < 1e-10
+       
+        return abs(reactions[0]) < 1e-10
         
     def Plot(self, bodies_positions=None, strains=None, ax=None,
              linkages_width=0.01, color='k', intensity_factor = 1e-6):
@@ -408,11 +412,17 @@ class UnidimensionalModel:
         while (set(new_activated_nonlinear_linkages) != set(activated_nonlinear_linkages)) and iters < max_iters:
 
             activated_nonlinear_linkages = new_activated_nonlinear_linkages[:]
+            
             additional_linkages = []
+            
             while not self.IsModelValid(activated_nonlinear_linkages+additional_linkages):
                 
                 disactivated_linkages = [l for l in self.nonlinear_linkages if not l in activated_nonlinear_linkages]
-                nla = random.choice(range(1, len(disactivated_linkages)))
+               
+                if len(disactivated_linkages)==1:
+                    nla=1
+                else:
+                    nla = random.choice(range(1, len(disactivated_linkages)))
                 additional_linkages = list(random.sample(disactivated_linkages, nla))
             activated_nonlinear_linkages.extend(additional_linkages)
             
@@ -425,20 +435,25 @@ class UnidimensionalModel:
             disactivated_nonlinear_linkages = []
             for linkage in self.nonlinear_linkages:
                 positions = (result.positions[linkage.body1], result.positions[linkage.body2])
+             
                 if linkage in result.strains:
                     reactions = result.strains[linkage]
                 else:
                     reactions = None
                 if linkage in activated_nonlinear_linkages:
                     # Checking if linkage should be desactivated
+                    
                     if not linkage.DesactivationCondition(positions, reactions):
+                        
                         new_activated_nonlinear_linkages.append(linkage)
+                        
                     else:
                         disactivated_nonlinear_linkages.append(linkage)
                 else:
                     
                     if linkage.ActivationCondition(positions, reactions):
                         new_activated_nonlinear_linkages.append(linkage)
+          
             iters += 1
 
         if max_iters == iters:

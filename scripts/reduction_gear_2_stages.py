@@ -16,8 +16,8 @@ Lb=0.2# bearing width
 Lgs=0.045# Gearset width
 
 
-C=300
-w=300
+C=-300
+w=-300
 r1=0.048
 r2=0.047
 y2=0.078
@@ -73,8 +73,10 @@ bearing3a=linkages.BallLinkage(ground,shaft3,p3a,[0,0,0],Ca,Cr,Cwb,'bearing3a')
 bearing3b=linkages.LinearAnnularLinkage(ground,shaft3,p3b,[0,0,0],Cr,Cwb,'bearing3b')
 
 
-gearset12=linkages.GearSetLinkage(shaft1,shaft2,pgs1,egs1,alpha_gs1,beta_gs1,Cf,Cvgs,'Gear set 1')
-gearset23=linkages.GearSetLinkage(shaft2,shaft3,pgs2,egs2,alpha_gs2,beta_gs2,Cf,Cvgs,'Gear set 2')
+gearset12=linkages.GearSetLinkage(shaft1, shaft2, pgs1, radial_vector=p2a-p1a, axial_vector=dir_axis, Cf=Cf, Cv = Cvgs,
+                                              pressure_angle=alpha_gs1,helix_angle=beta_gs1, name='Gear set 1')
+gearset23=linkages.GearSetLinkage(shaft2, shaft3, pgs2, radial_vector=p3a-p2a, axial_vector=dir_axis, Cf=Cf, Cv = Cvgs,
+                                              pressure_angle=alpha_gs2,helix_angle=beta_gs2, name='Gear set 2')
 
 load1=loads.KnownLoad(shaft1,[-Lb/2,0,0],[0,0,0],[0,0,0],[C,0,0],'input torque')
 load2=loads.SimpleUnknownLoad(shaft3,[2*(Lgs+Lb),y2,z2],[0,0,0],[],[0],'output torque')
