@@ -2,7 +2,7 @@
 import os
 
 scripts = ['reduction_gear_2_stages.py',
-           'dynamic_positions/crank_rio.py',
+           'dynamic_positions/crank_rod.py',
            'unidimensional/double_ball_bearings.py'
             ]
 
