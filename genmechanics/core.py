@@ -308,7 +308,7 @@ class Mechanism:
                     else:
                         side = -1
                 # It's really a linkage
-                P = geometry.euler_2_transfer_matrix(,
+                P = geometry.euler_2_transfer_matrix(*linkage2.euler_angles)
                 u = linkage2.position
                 uprime = u-position
                 L = geometry.cross_product_matrix(uprime)
@@ -350,7 +350,7 @@ class Mechanism:
             return npy.dot(linkage.static_matrix2, vr)
 
     def global_linkage_forces(self, linkage, num_part):
-        P = geometry.euler_2_transfer_matrix(,
+        P = geometry.euler_2_transfer_matrix(*linkage.euler_angles)
         lf = self.local_linkage_forces(linkage, num_part)
         F = npy.zeros(6)
         F[:3] = npy.dot(P, lf[:3])
