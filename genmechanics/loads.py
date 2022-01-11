@@ -12,23 +12,23 @@ import genmechanics.geometry as geometry
 import math
 
 class KnownLoad:
-    def __init__(self,part,position,euler_angles,forces,torques,name=''):
-        self.part=part
-        self.position=position
-        self.euler_angles=euler_angles
-        self.forces=array(forces)
-        self.torques=array(torques)
-        self.name=name
+    def __init__(self, part, position, euler_angles, forces, torques, name=''):
+        self.part = part
+        self.position = position
+        self.euler_angles = euler_angles
+        self.forces = array(forces)
+        self.torques = array(torques)
+        self.name = name
         
-        self.P= geometry.euler_2_transfer_matrix(,
+        self.P = geometry.euler_2_transfer_matrix(*self.euler_angles)
         
 class UnknownLoad:
     """
     :param force_directions: a list of directions for force (0,1,2)
     :param torque_directions: a list of directions for torque (0,1,2)
     """
-    def __init__(self,part,position,euler_angles,static_matrix,
-                 static_behavior_occurence_matrix,static_behavior_nonlinear_eq_indices,
+    def __init__(self, part, position, euler_angles, static_matrix,
+                 static_behavior_occurence_matrix, static_behavior_nonlinear_eq_indices,
                  static_behavior_linear_eq,static_behavior_nonlinear_eq,
                  static_require_kinematic,name=''):
         
@@ -47,7 +47,7 @@ class UnknownLoad:
 
         self.name=name
 #        print(euler_angles)
-        self.P= geometry.euler_2_transfer_matrix(,
+        self.P= geometry.euler_2_transfer_matrix(*self.euler_angles)
         self.n_static_unknowns=self.static_matrix.shape[1]
 
 
