@@ -48,7 +48,7 @@ imposed_displacements = [id1]
 sm = unidimensional.UnidimensionalModel(bodies, linear_linkages, nonlinear_linkages, loads,
                          imposed_displacements)
 #A = sm.LinearSolve()
-result = sm.Solve()
+result = sm.solve()
 
 #for result in results:
-result.Plot(intensity_factor=1e-5)
+result.plot(intensity_factor=1e-5)

@@ -481,7 +481,7 @@ class Mechanism:
         for ip, part in enumerate(self.parts):
             # linkage contribution to the LHS
             for linkage in self.graph[part].keys():
-                P = geometry.euler_2_transfer_matrix(,
+                P = geometry.euler_2_transfer_matrix(*linkage.euler_angles)
                 u = linkage.position
                 uprime = u
                 L = geometry.cross_product_matrix(uprime)
@@ -510,7 +510,7 @@ class Mechanism:
             except:
                 uloads = []
             for load in uloads:
-                P = geometry.euler_2_transfer_matrix(,
+                P = geometry.euler_2_transfer_matrix(*load.euler_angles)
                 u = load.position
                 uprime = u
                 L = geometry.cross_product_matrix(uprime)
@@ -532,7 +532,7 @@ class Mechanism:
             except:
                 loads = []
             for load in loads:
-                P = geometry.euler_2_transfer_matrix(,
+                P = geometry.euler_2_transfer_matrix(*load.euler_angles)
                 u = load.position
                 uprime = u
                 L = geometry.cross_product_matrix(uprime)
@@ -628,7 +628,7 @@ class Mechanism:
                 neq += neq_load
                 neq_linear += neq_linear_load
 
-        solvable, solvable_var, resolution_order = tools.EquationsSystemAnalysis(M, None)
+        solvable, solvable_var, resolution_order = tools.equations_system_analysis(M, None)
 #        print(resolution_order)
         if not solvable:
             raise ModelError('Overconstrained system')
@@ -737,7 +737,7 @@ class Mechanism:
                         else:
                             side = -1
                     # Linkage
-                    P = geometry.euler_2_transfer_matrix(,
+                    P = geometry.euler_2_transfer_matrix(*linkage.euler_angles)
                     u = linkage.position
                     uprime = u
                     L = geometry.cross_product_matrix(uprime)
@@ -779,7 +779,7 @@ class Mechanism:
                         else:
                             side = -1
                     # It's really a linkage
-                    P = geometry.euler_2_transfer_matrix(,
+                    P = geometry.euler_2_transfer_matrix(*linkage2.euler_angles)
                     u = linkage2.position
                     uprime = u-linkage.position
                     L = geometry.cross_product_matrix(uprime)
@@ -788,7 +788,7 @@ class Mechanism:
                         V[:, ndof] += side*Ve[:, indof]
 
 
-            P = geometry.euler_2_transfer_matrix(,
+            P = geometry.euler_2_transfer_matrix(*linkage.euler_angles)
             for direction in linkage.kinematic_directions:
                 K[ieq, :] = npy.dot(npy.dot(P, direction), V)
                 ieq += 1
@@ -801,7 +801,7 @@ class Mechanism:
 
         # deducing M from K for last lines
         M[6*ll:, :] = npy.abs(K[6*ll:, :]) > 1e-10
-        solvable, solvable_var, resolution_order = tools.EquationsSystemAnalysis(M, None)
+        solvable, solvable_var, resolution_order = tools.equations_system_analysis(M, None)
 
         if solvable:
             for eqs, variables in resolution_order:

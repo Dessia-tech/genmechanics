@@ -78,12 +78,12 @@ for i in range(nsteps):
     Fi = i*F/float(nsteps+1)
     load_values.append(Fi)
     l1.value = Fi
-    result = sm.Solve()
+    result = sm.solve()
     
     # b1
     u1 = result.displacements[s1.body1]
     u2 = result.displacements[s1.body2]
-    print(s1.Strains((u1, u2)))
+    print(s1.strains((u1, u2)))
     
     if u2 - u1 < 0:
         strain_bearing1.append(-k1*(u2-u1))
@@ -114,8 +114,7 @@ for i in range(nsteps):
     else:
         strain_bearing4.append(0.)
 
-
-result.Plot(intensity_factor=1e-5)
+result.plot(intensity_factor=1e-5)
 plt.figure()
 plt.plot(load_values, strain_bearing1, label='bearing1')
 plt.plot(load_values, strain_bearing2, label='bearing2')
