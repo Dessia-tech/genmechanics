@@ -1260,7 +1260,7 @@ class MechanismConfigurations(DessiaObject):
             meshes_string += lines[0].babylon_script(name='part_parent', color=colors[part])
             meshes_string += 'parts_parent.push(part_parent);\n'
             for l in lines[1:]:
-                meshes_string += l.babylon(,
+                meshes_string += l.babylon(color=colors[part], parent='part_parent')
 #                meshes_string += 'part_meshes.push(line);\n'
 
 #            # Adding interest points
