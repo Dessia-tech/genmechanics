@@ -889,12 +889,11 @@ class MechanismConfigurations(DessiaObject):
                 self.steps.append(step)
 
         number_steps = len(self.steps)
-
-        DessiaObject.__init__(self,
-                              mechanism=mechanism,
-                              steps_imposed_parameters=steps_imposed_parameters,
-                              linkage_steps_parameters=linkage_steps_parameters,
-                              number_steps=number_steps)
+        self.mechanism = mechanism
+        self.steps_imposed_parameters = steps_imposed_parameters
+        self.linkage_steps_parameters = linkage_steps_parameters
+        self.number_steps = number_steps
+        DessiaObject.__init__(self)
 
         if not self.is_valid():
             raise ValueError
@@ -1259,13 +1258,14 @@ class MechanismConfigurations(DessiaObject):
             lines = part.wireframe_lines(part_points[part])
             meshes_string += lines[0].babylon_script(name='part_parent', color=colors[part])
             meshes_string += 'parts_parent.push(part_parent);\n'
-            for l in lines[1:]:
-                meshes_string += l.babylon(color=colors[part], parent='part_parent')
+            for line in lines[1:]:
+                meshes_string += line.babylon(color=colors[part], parent='part_parent')
 #                meshes_string += 'part_meshes.push(line);\n'
 
 #            # Adding interest points
 #            for point in part.interest_points:
-#                meshes_string += 'var point = BABYLON.MeshBuilder.CreateSphere("interest_point", {diameter: 0.01}, scene);\n'
+#                meshes_string += 'var point = BABYLON.MeshBuilder.CreateSphere("interest_point",
+            #                     {diameter: 0.01}, scene);\n'
 #                meshes_string += 'point.position = new BABYLON.Vector3({}, {}, {});'.format(*point.vector)
 #                meshes_string += 'part_meshes.push(point);'
 
@@ -1316,8 +1316,7 @@ class MechanismConfigurations(DessiaObject):
 #            step_linkage_positions = []
             for part in self.mechanism.parts:
 
-                frame = round(self.mechanism.part_global_frame(part,
-                                                               step))
+                frame = self.mechanism.part_global_frame(part,step)
 
                 step_positions.append(list(frame.origin))
                 step_orientations.append([list(frame.u),
