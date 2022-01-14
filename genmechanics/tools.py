@@ -19,13 +19,13 @@ def construction_sources_and_sinks(graphe):
     g2 = sources[:]
 
     for node in sources:
-        for node2 in nx.descendants(gp, node):
+        for node2 in nx.descendants(graphe, node):
             if node2 not in g2:
                 g2.append(node2)
 
     g3 = sinks[:]
     for node in sinks:
-        for node2 in nx.ancestors(gp, node):
+        for node2 in nx.ancestors(graphe, node):
             if node2 not in g3:
                 g3.append(node2)
     return g2, g3
@@ -46,11 +46,11 @@ def construction_graphes_system_analysis(Mo):
         pos['e' + str(i)] = [i, 1]
         for j in range(nvar):
             if Mo[i, j] == 1:
-                G.add_edge('e' + str(i), 'v' + str(j))
+                g.add_edge('e' + str(i), 'v' + str(j))
                 gp.add_edge('e' + str(i), 'v' + str(j))
 
     for gi in (g.subgraph(c).copy() for c in nx.connected_components(g)):
-        M = nx.bipartite.maximum_matching(Gi)
+        M = nx.bipartite.maximum_matching(gi)
         #    print('M',M,len(M))
 
         for n1, n2 in M.items():

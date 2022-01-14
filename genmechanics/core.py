@@ -705,7 +705,7 @@ class Mechanism:
                 loads_parts[load.part] = [load]
 
         lparts = len(self.parts)
-        M, K, F, nonlinear_eq, indices_r = self.construction_matrix_m_k_f_and_non_linear_eq(uloads_parts, loads_parts)
+        M, K, F, nonlinear_eq, indices_r = self.construction_matrix_m_k_f_and_non_linear_eq_static(uloads_parts, loads_parts)
 
         solvable, solvable_var, resolution_order = tools.equations_system_analysis(M, None)
 #        print(resolution_order)
