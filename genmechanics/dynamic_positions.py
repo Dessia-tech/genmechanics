@@ -1220,19 +1220,9 @@ class MechanismConfigurations(DessiaObject):
         ax.set_ylabel(str(y))
         ax.margins(.1)
 
-    def babylonjs(self, page='gm_babylonjs', plot_frames=False,
-                  plot_trajectories=True, plot_instant_rotation_axis=False,
-                  use_cdn=False):
-
-        page += '.html'
-
-        np = len(self.mechanism.parts)
-        colors = {p: hsv_to_rgb((ip / np, 0.78, 0.87)) for ip, p in enumerate(self.mechanism.parts)}
-
+    def part_points(self):
         part_points = {p: [] for p in self.mechanism.parts}
         part_points[self.mechanism.ground] = []
-#        part_frames = {}
-
         for part, linkages in self.mechanism.part_linkages().items():
 
             for linkage in linkages:
@@ -1250,7 +1240,20 @@ class MechanismConfigurations(DessiaObject):
 
             for point in part.interest_points:
                 part_points[part].append(point)
+        return part_points
 
+
+    def babylonjs(self, page='gm_babylonjs', plot_frames=False,
+                  plot_trajectories=True, plot_instant_rotation_axis=False,
+                  use_cdn=False):
+
+        page += '.html'
+
+        np = len(self.mechanism.parts)
+        colors = {p: hsv_to_rgb((ip / np, 0.78, 0.87)) for ip, p in enumerate(self.mechanism.parts)}
+
+        part_points = self.part_points()
+#        part_frames = {}
         meshes_string = 'var parts_parent = [];\n'
 
         for part in self.mechanism.parts:
