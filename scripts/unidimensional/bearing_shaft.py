@@ -83,7 +83,7 @@ loads = [p1, l1, pl1, pl2]
 sm = unidimensional.UnidimensionalModel(bodies, linear_linkages, nonlinear_linkages, loads,
                          imposed_displacements)
 
-result = sm.Solve(500)
+result = sm.solve(500)
 
 #for result in results:
-result.Plot(intensity_factor=1e-5)
+result.plot(intensity_factor=1e-5)
