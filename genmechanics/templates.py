@@ -1,7 +1,7 @@
 from string import Template
 
 babylon_template = Template(
-"""
+    """
 <!doctype html>
 <html>
 <head>

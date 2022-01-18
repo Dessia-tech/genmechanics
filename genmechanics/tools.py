@@ -7,6 +7,7 @@ Created on Sun Dec  4 20:13:02 2016
 
 import networkx as nx
 
+
 def construction_sources_and_sinks(graphe):
     sinks = []
     sources = []
@@ -29,6 +30,7 @@ def construction_sources_and_sinks(graphe):
             if node2 not in g3:
                 g3.append(node2)
     return g2, g3
+
 
 def construction_graphes_system_analysis(Mo):
     neq, nvar = Mo.shape
@@ -57,8 +59,8 @@ def construction_graphes_system_analysis(Mo):
             # print(n1,n2)
             gp.add_edge(n1, n2)
 
-
     return g, gp
+
 
 def calcul_order_ev(graph, strongly_connected_components, solvable_vars, ):
     c = nx.condensation(graph, strongly_connected_components)
@@ -77,7 +79,6 @@ def calcul_order_ev(graph, strongly_connected_components, solvable_vars, ):
             if ancetre not in ancetres_vars:
                 ancetres_vars.append(ancetre)
 
-
     ordre_sc = [sc for sc in nx.topological_sort(c) if sc in ancetres_vars]
     ordre_ev = []
     for isc in ordre_sc:
@@ -87,6 +88,7 @@ def calcul_order_ev(graph, strongly_connected_components, solvable_vars, ):
         ordre_ev.append(([int(e[1:]) for e in evs[0:levs]], [int(v[1:]) for v in evs[levs:]]))
 
     return ordre_ev
+
 
 def equations_system_analysis(Mo, vars_to_solve, overconstrain_stop=True):
     """
@@ -108,8 +110,8 @@ def equations_system_analysis(Mo, vars_to_solve, overconstrain_stop=True):
             return (False, [], None)
 
     solvable_vars = []
-    for var in vars_to_solve: 
-        if not 'v'+str(var) in g2+g3:
+    for var in vars_to_solve:
+        if not 'v' + str(var) in g2 + g3:
             solvable_vars.append(var)
 
     g1 = g.copy()
@@ -136,9 +138,9 @@ def equations_system_analysis(Mo, vars_to_solve, overconstrain_stop=True):
                 g1p.add_edge(n2, n1)
 
     scc = list(nx.strongly_connected_components(g1p))
-    
+
     if scc:
         ordre_ev = calcul_order_ev(g1p, scc, solvable_vars)
         return (True, solvable_vars, ordre_ev)
-        
+
     return (False, [], None)

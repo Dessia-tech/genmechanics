@@ -129,7 +129,7 @@ class Mechanism:
             path = []
             raw_path = list(nx.shortest_path(self.settings_graph, part1, part2))
 #            print('rp', raw_path)
-            for part1, linkage, part2 in zip(raw_path[:-2:2], raw_path[1::2], raw_path[2::2]+[part2]):
+            for part1, linkage, part2 in zip(raw_path[:-2:2], raw_path[1::2], raw_path[2::2] + [part2]):
                 path.append((part1, linkage, linkage.part1 == part1, part2))
 
             self._settings_paths[part1, part2] = path
@@ -182,16 +182,16 @@ class Mechanism:
     <script type="text/javascript">
     var nodes = new vis.DataSet([\n"""
         index = {}
-        for ipart, part in enumerate(self.parts+[self.ground]):
+        for ipart, part in enumerate(self.parts + [self.ground]):
             index[part] = ipart
             s += "{{id: {}, label: '{}'}},\n".format(ipart, part.name)
 #        s+=']);\n'
-        n = len(self.parts)+1
+        n = len(self.parts) + 1
 #        index[self.ground]=n
 #        n+=1
         for il, linkage in enumerate(self.linkages):
-            index[linkage] = n+il
-            s += "{{id: {}, label: '{}'}},\n".format(n+il, linkage.name)
+            index[linkage] = n + il
+            s += "{{id: {}, label: '{}'}},\n".format(n + il, linkage.name)
         s += ']);\n'
 
         s += "var edges = new vis.DataSet(["
@@ -251,7 +251,7 @@ class Mechanism:
             widths.append(abs(self.transmitted_linkage_power(linkage, 1)))
             edges.append((linkage, linkage.part2))
 
-        for load in self.unknown_static_loads+self.known_static_loads:
+        for load in self.unknown_static_loads + self.known_static_loads:
             G.add_node(load)
             G.add_edge(load, load.part)
             widths.append(abs(self.load_power(load)))
@@ -259,7 +259,7 @@ class Mechanism:
             edges.append((load, load.part))
         max_widths = max(widths)
 #        print(widths)
-        widths = [6*w/max_widths for w in widths]
+        widths = [6 * w / max_widths for w in widths]
 #        edges[linkage,part]=e
         if not return_graph:
             plt.figure()
@@ -297,26 +297,27 @@ class Mechanism:
         for il, linkage2 in enumerate(path):
             if not linkage2.__class__.__name__ == 'Part':
                 try:
-                    if path[il+1] == linkage2.part2:
+                    if path[il + 1] == linkage2.part2:
                         side = 1
                     else:
                         side = -1
                 except IndexError:
                     # linkage is last element of list
-                    if path[il-1] == linkage2.part1:
+                    if path[il - 1] == linkage2.part1:
                         side = 1
                     else:
                         side = -1
                 # It's really a linkage
                 P = geometry.euler_2_transfer_matrix(*linkage2.euler_angles)
                 u = linkage2.position
-                uprime = u-position
+                uprime = u - position
                 L = geometry.cross_product_matrix(uprime)
-                Ve = npy.dot(L, npy.dot(P, linkage2.kinematic_matrix[:3, :]))+npy.dot(P, linkage2.kinematic_matrix[3:, :])
+                Ve = npy.dot(L, npy.dot(P, linkage2.kinematic_matrix[:3, :])
+                             ) + npy.dot(P, linkage2.kinematic_matrix[3:, :])
                 We = npy.dot(P, linkage2.kinematic_matrix[:3, :])
                 for indof, ndof in enumerate(self.kdof[linkage2]):
-                    V[:, ndof] += side*Ve[:, indof]
-                    W[:, ndof] += side*We[:, indof]
+                    V[:, ndof] += side * Ve[:, indof]
+                    W[:, ndof] += side * We[:, indof]
 
         return npy.hstack((npy.dot(W, q).flatten(), npy.dot(V, q).flatten()))
 
@@ -390,7 +391,7 @@ class Mechanism:
             w = s[:3]
             v = s[3:]
 #            print(df,dt,w,v)
-            return npy.dot(df, v)+npy.dot(dt, w)
+            return npy.dot(df, v) + npy.dot(dt, w)
 
     def load_power(self, load):
         s = self.speeds(load.position, self.ground, load.part)
@@ -449,10 +450,10 @@ class Mechanism:
                 if neq_linear_load > 0:
                     Ke = npy.zeros((neq_linear_load, self.n_sdof))
                     for indof, ndof in enumerate(self.sdof[load]):
-                        Ke[neq_linear:neq_linear+6, ndof] += load.static_behavior_linear_eq[:, indof]
+                        Ke[neq_linear:neq_linear + 6, ndof] += load.static_behavior_linear_eq[:, indof]
                     K = npy.vstack([K, Ke])
 
-                    indices_r.extend(range(neq_linear, neq_linear+neq_linear_load))
+                    indices_r.extend(range(neq_linear, neq_linear + neq_linear_load))
 
                 # Collecting non linear equations
 
@@ -464,14 +465,14 @@ class Mechanism:
                 else:
                     w, v = 0, 0
                 for i, fct in zip(load.static_behavior_nonlinear_eq_indices, load.static_behavior_nonlinear_eq):
-                    nonlinear_eq[neq+i] = lambda x, v=v, w=w, fct=fct: fct(x, w, v)
+                    nonlinear_eq[neq + i] = lambda x, v=v, w=w, fct=fct: fct(x, w, v)
 
                 # Updating counters
                 neq += neq_load
                 neq_linear += neq_linear_load
         return M, K
 
-    def behavior_equation_of_linkages_static(self, M ,K , nonlinear_eq, neq, neq_linear, indices_r):
+    def behavior_equation_of_linkages_static(self, M, K, nonlinear_eq, neq, neq_linear, indices_r):
 
         for linkage in self.linkages:
             neq_linkage = linkage.static_behavior_occurence_matrix.shape[0]
@@ -591,7 +592,6 @@ class Mechanism:
 
         return M, K, F
 
-
     def construction_matrix_m_k_f_and_non_linear_eq_static(self, uloads_parts, loads_parts):
 
         lparts = len(self.parts)
@@ -614,7 +614,7 @@ class Mechanism:
 
         return M, K, F, nonlinear_eq, indices_r
 
-    def construction_matrix_q_static(self,M, K, F, nonlinear_eq, indices_r, resolution_order ):
+    def construction_matrix_q_static(self, M, K, F, nonlinear_eq, indices_r, resolution_order):
         q = npy.zeros(self.n_sdof)
 
         for eqs, variables in resolution_order:
@@ -677,7 +677,7 @@ class Mechanism:
         self.n_sdof = 0
         kinematic_analysis_required = False
         for linkage in self.linkages:
-            self.sdof[linkage] = list(range(self.n_sdof, self.n_sdof+linkage.n_static_unknowns))
+            self.sdof[linkage] = list(range(self.n_sdof, self.n_sdof + linkage.n_static_unknowns))
             self.n_sdof += linkage.n_static_unknowns
             if linkage.static_require_kinematic:
                 kinematic_analysis_required = True
@@ -685,7 +685,7 @@ class Mechanism:
         uloads_parts = {}
         for load in self.unknown_static_loads:
             load_unknowns = load.static_matrix.shape[1]
-            self.sdof[load] = list(range(self.n_sdof, self.n_sdof+load_unknowns))
+            self.sdof[load] = list(range(self.n_sdof, self.n_sdof + load_unknowns))
             self.n_sdof += load_unknowns
             if load.static_require_kinematic:
                 kinematic_analysis_required = True
@@ -709,7 +709,8 @@ class Mechanism:
                 loads_parts[load.part] = [load]
 
         lparts = len(self.parts)
-        M, K, F, nonlinear_eq, indices_r = self.construction_matrix_m_k_f_and_non_linear_eq_static(uloads_parts, loads_parts)
+        M, K, F, nonlinear_eq, indices_r = self.construction_matrix_m_k_f_and_non_linear_eq_static(
+            uloads_parts, loads_parts)
 
         solvable, solvable_var, resolution_order = tools.equations_system_analysis(M, None)
 #        print(resolution_order)
@@ -755,7 +756,7 @@ class Mechanism:
                     Me1 = npy.abs(npy.dot(P, linkage.kinematic_matrix[:3, :])) > 1e-10
                     Me2 = npy.abs(npy.dot(L, npy.dot(P, linkage.kinematic_matrix[:3, :])) + npy.dot(P,
                                                                                                     linkage.kinematic_matrix[
-                                                                                                    3:, :])) > 1e-10
+                                                                                                        3:, :])) > 1e-10
                     Me = npy.vstack([Me1, Me2])
                     for indof, ndof in enumerate(self.kdof[linkage]):
                         M[6 * il:6 * il + 6, ndof] += Me[:, indof]
@@ -763,7 +764,7 @@ class Mechanism:
                     Ke1 = npy.dot(P, linkage.kinematic_matrix[:3, :])
                     Ke2 = npy.dot(L, npy.dot(P, linkage.kinematic_matrix[:3, :])) + npy.dot(P,
                                                                                             linkage.kinematic_matrix[3:,
-                                                                                            :])
+                                                                                                                     :])
                     Ke = side * npy.vstack([Ke1, Ke2])
                     for indof, ndof in enumerate(self.kdof[linkage]):
                         K[6 * il:6 * il + 6, ndof] += Ke[:, indof]
@@ -802,7 +803,7 @@ class Mechanism:
                     L = geometry.cross_product_matrix(uprime)
                     Ve = npy.dot(L, npy.dot(P, linkage2.kinematic_matrix[:3, :])) + npy.dot(P,
                                                                                             linkage2.kinematic_matrix[
-                                                                                            3:, :])
+                                                                                                3:, :])
                     for indof, ndof in enumerate(self.kdof[linkage2]):
                         V[:, ndof] += side * Ve[:, indof]
 
@@ -825,8 +826,8 @@ class Mechanism:
         self.kdof = {}
         loops = nx.cycle_basis(self.holonomic_graph)
         ll = len(loops)
-        ieq = 6*ll
-        neq = ieq+len(self.imposed_speeds)
+        ieq = 6 * ll
+        neq = ieq + len(self.imposed_speeds)
         nhl = []
         for linkage in self.linkages:
             try:
@@ -834,9 +835,9 @@ class Mechanism:
                 ndofl = linkage.kinematic_matrix.shape[1]
                 for dofl in range(ndofl):
                     try:
-                        self.kdof[linkage].append(self.n_kdof+dofl)
+                        self.kdof[linkage].append(self.n_kdof + dofl)
                     except KeyError:
-                        self.kdof[linkage] = [self.n_kdof+dofl]
+                        self.kdof[linkage] = [self.n_kdof + dofl]
                 self.n_kdof += ndofl
             except AttributeError:
                 # Non holonomic linkage
@@ -848,7 +849,7 @@ class Mechanism:
 
         # deducing M from K for last lines
 
-        M[6*ll:, :] = npy.abs(K[6*ll:, :]) > 1e-10
+        M[6 * ll:, :] = npy.abs(K[6 * ll:, :]) > 1e-10
 
         solvable, solvable_var, resolution_order = tools.equations_system_analysis(M, None)
 
@@ -857,7 +858,7 @@ class Mechanism:
                 eqs = npy.array(eqs)
                 other_vars = npy.array([i for i in range(self.n_kdof) if i not in variables])
                 Kr = K[eqs[:, None], npy.array(variables)]
-                Fr = F[eqs, :]-npy.dot(K[eqs[:, None], other_vars], q[other_vars, :])
+                Fr = F[eqs, :] - npy.dot(K[eqs[:, None], other_vars], q[other_vars, :])
                 q[variables, :] = linalg.solve(Kr, Fr)
             results = {}
             for link, dofs in self.kdof.items():
@@ -875,7 +876,7 @@ class Mechanism:
         orientations = []
         labels = []
 
-        for load in self.known_static_loads+self.unknown_static_loads:
+        for load in self.known_static_loads + self.unknown_static_loads:
             pl = self.load_power(load)
 #            print(pl)
             flows.append(pl)
@@ -897,7 +898,7 @@ class Mechanism:
         l = max([abs(f) for f in flows])
 #        pl=[0.1*l]*len(flows)
 
-        sankey = Sankey(unit='W', scale=1/l)
+        sankey = Sankey(unit='W', scale=1 / l)
 
         sankey.add(flows=flows,
                    orientations=orientations, labels=labels,)
@@ -908,7 +909,7 @@ class Mechanism:
         points = []
         for linkage in self.linkages:
             points.append(vm.Point3D(linkage.position[0], linkage.position[1], linkage.position[2]))
-            list_result = linkage.position+u*linkage.P[:, 0]
+            list_result = linkage.position + u * linkage.P[:, 0]
             points.append(vm.edges.Line3D(vm.Point3D(linkage.position[0], linkage.position[1], linkage.position[2]),
                                           vm.Point3D(list_result[0], list_result[1], list_result[2])))
         mdl = vm.core.VolumeModel(points)
@@ -919,7 +920,7 @@ class Mechanism:
         max_vect = self.linkages[0].position.copy()
         center = self.linkages[0].position.copy()
         n = 1
-        for linkage in self.linkages[1:]+self.known_static_loads+self.unknown_static_loads:
+        for linkage in self.linkages[1:] + self.known_static_loads + self.unknown_static_loads:
             # print(linkage)
             for i, (xmin, xmax, xi) in enumerate(zip(min_vect, max_vect, linkage.position)):
                 # print(i,xmin,xmax,xi)
@@ -933,9 +934,9 @@ class Mechanism:
             center += linkage.position
             n += 1
 
-        center = center/n
+        center = center / n
         # print(min_vect,max_vect)
-        max_length = linalg.norm(min_vect-max_vect)
+        max_length = linalg.norm(min_vect - max_vect)
         # print(center,max_length)
         return center, max_length
 
@@ -952,7 +953,7 @@ class Mechanism:
                 max_force = max(max_force, max(f))
                 max_torque = max(max_torque, max(t))
 
-            for load in self.known_static_loads+self.unknown_static_loads:
+            for load in self.known_static_loads + self.unknown_static_loads:
                 f = self.global_load_forces(load)[0:3]
                 t = self.global_load_forces(load)[3:]
                 max_force = max(max_force, max(f))
@@ -968,7 +969,7 @@ class Mechanism:
                     linkages_strings.append(
                         linkage.babylon(length, [f / max_force * length / 4 for f in self.global_linkage_forces(
                             linkage, 0)[0:3]], [f / max_torque * length / 4 for f in self.global_linkage_forces(
-                            linkage, 0)[3:]]))
+                                linkage, 0)[3:]]))
                 else:
                     linkages_strings.append(linkage.babylon(length, None, None))
 
@@ -1045,17 +1046,17 @@ class Mechanism:
 #         light.intensity = .5;
 #         """
 #
-##         // Let's try our built-in 'sphere' shape. Params: name, subdivisions, size, scene
-##         var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
-##         // Move the sphere upward 1/2 its height
+# // Let's try our built-in 'sphere' shape. Params: name, subdivisions, size, scene
+# var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
+# // Move the sphere upward 1/2 its height
 ##         sphere.position.y = 1;
-##         // Let's try our built-in 'ground' shape. Params: name, width, depth, subdivisions, scene
-##         var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
+# // Let's try our built-in 'ground' shape. Params: name, width, depth, subdivisions, scene
+# var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
 #
 #        for linkage in self.linkages:
 #            s+='var sphere = BABYLON.Mesh.CreateSphere("sphere1", 15., {}, scene);\n'.format(length/30)
 #            s+="sphere.position=new BABYLON.Vector3({},{},{});\n".format(*linkage.position)
-##            s+="var lines = BABYLON.Mesh.CreateLines("lines", [    new BABYLON.Vector3(-10, 0, 0)"
+# s+="var lines = BABYLON.Mesh.CreateLines("lines", [    new BABYLON.Vector3(-10, 0, 0)"
 #        s+="""
 #         // Leave this function
 #         return scene;
