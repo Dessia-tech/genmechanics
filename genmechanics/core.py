@@ -469,6 +469,7 @@ class Mechanism:
                 # Updating counters
                 neq += neq_load
                 neq_linear += neq_linear_load
+        return M, K
 
     def behavior_equation_of_linkages_static(self, M ,K , nonlinear_eq, neq, neq_linear, indices_r):
 
@@ -519,6 +520,8 @@ class Mechanism:
                 # Updating counters
                 neq += neq_linkage
                 neq_linear += neq_linear_linkage
+
+        return M, K
 
     def occurence_matrix_assembly_static(self, M, K, F, uloads_parts, loads_parts):
 
@@ -586,6 +589,8 @@ class Mechanism:
                 Fe = npy.hstack([F1.reshape(3), F2.reshape(3)])
                 F[ip * 6:(ip + 1) * 6] -= Fe  # minus because of sum is in LHS
 
+        return M, K, F
+
 
     def construction_matrix_m_k_f_and_non_linear_eq_static(self, uloads_parts, loads_parts):
 
@@ -596,22 +601,21 @@ class Mechanism:
         nonlinear_eq = {}
 
         # Occurence matrix assembly
-        self.occurence_matrix_assembly_static(M, K, F, uloads_parts, loads_parts)
-
+        M, K, F = self.occurence_matrix_assembly_static(M, K, F, uloads_parts, loads_parts)
         neq = 6 * lparts
         neq_linear = neq
         indices_r = list(range(neq))
 
         # behavior equations of linkages
-        self.behavior_equation_of_linkages_static(M, K, nonlinear_eq, neq, neq_linear, indices_r)
+        M, K = self.behavior_equation_of_linkages_static(M, K, nonlinear_eq, neq, neq_linear, indices_r)
 
         # behavior equations of unknowns loads
-        self.behavior_equation_of_unknows_loads_static(M, K, nonlinear_eq, neq, neq_linear, indices_r)
+        M, K = self.behavior_equation_of_unknows_loads_static(M, K, nonlinear_eq, neq, neq_linear, indices_r)
 
         return M, K, F, nonlinear_eq, indices_r
 
-    def construction_matrix_q_static(self,K, F, nonlinear_eq, indices_r, resolution_order ):
-        q = npy.zeros((self.n_kdof, 1))
+    def construction_matrix_q_static(self,M, K, F, nonlinear_eq, indices_r, resolution_order ):
+        q = npy.zeros(self.n_sdof)
 
         for eqs, variables in resolution_order:
             #            print(eqs,variables)
@@ -712,7 +716,7 @@ class Mechanism:
         if not solvable:
             raise ModelError('Overconstrained system')
 
-        q = self.construction_matrix_q(K, F, nonlinear_eq, indices_r, resolution_order)
+        q = self.construction_matrix_q_static(M, K, F, nonlinear_eq, indices_r, resolution_order)
         results = {}
         for link, dofs in self.sdof.items():
             rlink = {}
@@ -765,7 +769,6 @@ class Mechanism:
                         K[6 * il:6 * il + 6, ndof] += Ke[:, indof]
 
         # Non holonomic equations
-
         for linkage in nhl:
             # Speed computation
             try:
@@ -844,7 +847,9 @@ class Mechanism:
         M, K, F = self.construction_matrix_m_k_f_kinematic(neq, loops, nhl)
 
         # deducing M from K for last lines
+
         M[6*ll:, :] = npy.abs(K[6*ll:, :]) > 1e-10
+
         solvable, solvable_var, resolution_order = tools.equations_system_analysis(M, None)
 
         if solvable:

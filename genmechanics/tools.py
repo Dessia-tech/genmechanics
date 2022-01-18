@@ -94,7 +94,7 @@ def equations_system_analysis(Mo, vars_to_solve, overconstrain_stop=True):
         :return: False (if system is unsolvable) if overconstrain_stop==True
         else, returns True, the solvable variables and the resolution order
     """
-    
+
     if vars_to_solve is None:
         vars_to_solve = range(Mo.shape[1])
 
