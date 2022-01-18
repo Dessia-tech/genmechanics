@@ -13,6 +13,7 @@ import random
 
 from matplotlib.patches import Arrow, Polygon
 
+
 class Body:
     """
     :param y_position: The y position in plots of the body. 
@@ -22,13 +23,14 @@ class Body:
         self.initial_position = initial_position
         self.y_position = y_position
         self.name = name
-        
+
+
 class Load:
     def __init__(self, body, value):
         self.body = body
         self.value = value
         
-    def Plot(self, bodies_position=None, ax=None, width=0.008, intensity_factor=1e-4):
+    def plot(self, bodies_position=None, ax=None, width=0.008, intensity_factor=1e-4):
         if bodies_position is None:
             bodies_position = {self.body: self.body.initial_position}
         x = bodies_position[self.body]
@@ -38,14 +40,15 @@ class Load:
         ax.text(x+0.5*self.value*intensity_factor, y+0.2*width,
                 '{} N'.format(round(self.value)),
                 color='k', horizontalalignment='center', verticalalignment='bottom')
-        
+
+
 class ImposedDisplacement:
     def __init__(self, body, value):
         self.body = body
         self.value = value
         self.neqs = 1
         
-    def Plot(self, bodies_positions=None, strains=None, ax=None, 
+    def plot(self, bodies_positions=None, strains=None, ax=None,
              width=0.01, color='k', intensity_factor=1e-6):
         if bodies_positions is None:
             bodies_positions = {self.body: self.body}
@@ -57,7 +60,7 @@ class ImposedDisplacement:
         h = 0.5*width
         ax.add_patch(Polygon([(x1, y), (x1-h, y-h), (x1+h, y-h)], True, color='grey'))
         if self.value != 0:
-            ax.add_patch(Arrow(x0, y, self.value, 0, width = 0.5*h, color='g'))        
+            ax.add_patch(Arrow(x0, y, self.value, 0, width=0.5*h, color='g'))
             ax.text(x0 + 0.5*self.value, y+0.2*h,
                     '{} mm'.format(round(1000*self.value)),
                     horizontalalignment='center', verticalalignment='bottom')
@@ -69,21 +72,22 @@ class Linkage:
         self.body2 = body2
         self.n_constraints = n_constraints
         self.name = name 
-        
+
+
 class Spring(Linkage):
     def __init__(self, body1, body2, stiffness, free_length, name=''):
         Linkage.__init__(self, body1, body2, 0, name) 
         self.stiffness = stiffness
         self.free_length = free_length
         
-    def StiffnessMatrices(self):
-        return (self.stiffness * npy.array([[1,-1], [-1, 1]]),
+    def stiffness_matrices(self):
+        return (self.stiffness * npy.array([[1, -1], [-1, 1]]),
                 self.stiffness * self.free_length * npy.array([-1, 1]))
         
-    def ConstraintsMatrices(self):
-                return None, None
+    def constraints_matrices(self):
+        return None, None
         
-    def Plot(self, bodies_positions=None, strains=None, ax=None,
+    def plot(self, bodies_positions=None, strains=None, ax=None,
              linkages_width=0.01, color='k', intensity_factor=1e-6):
         if bodies_positions is None:
             bodies_positions = {self.body1: self.body1.initial_position,
@@ -102,8 +106,7 @@ class Spring(Linkage):
                 '{} #{}'.format(self.__class__.__name__, str(self.__hash__())[-5:]),
                 horizontalalignment='center')
 
-        
-    def Strains(self, positions):
+    def strains(self, positions):
         return self.stiffness*(self.free_length - (positions[1] - positions[0]))
         
 
@@ -113,44 +116,43 @@ class CompressionSpring(Spring):
         self.stiffness = stiffness
         self.free_length = free_length
         
-    def StiffnessMatrices(self):
-        return (self.stiffness * npy.array([[1,-1], [-1, 1]]),
+    def stiffness_matrices(self):
+        return (self.stiffness * npy.array([[1, -1], [-1, 1]]),
                 self.stiffness * self.free_length * npy.array([-1, 1]))
         
-    def ConstraintsMatrices(self):
+    def constraints_matrices(self):
         return None, None
         
-    def ActivationCondition(self, positions, reactions):
+    def activation_condition(self, positions, reactions):
         return (positions[1] - positions[0]) < self.free_length + 1e-10
 
-    def DesactivationCondition(self, positions, reactions):
+    def desactivation_condition(self, positions, reactions):
         return (positions[1] - positions[0]) > self.free_length + 1e-10
+
 
 class UnilateralContact(Linkage):
     def __init__(self, body_left, body_right, contact_distance, name=''):
         Linkage.__init__(self, body_left, body_right, 1, name) 
         self.contact_distance = contact_distance
     
-    def StiffnessMatrices(self):
+    def stiffness_matrices(self):
         return None, None
     
-    def ConstraintsMatrices(self):
-        return npy.array([[1.,-1.]]), npy.array([0.])
+    def constraints_matrices(self):
+        return npy.array([[1., -1.]]), npy.array([0.])
         
-    def ActivationCondition(self, positions, reactions):
-#        print('act', self.name, p, (p[1] - p[0]) < self.contact_distance)
-        
-        
-        
+    def activation_condition(self, positions, reactions):
+        # print('act', self.name, p, (p[1] - p[0]) < self.contact_distance)
+
         return (positions[1] - positions[0]) <= self.contact_distance-1e-8
 
-    def DesactivationCondition(self, positions, reactions):        
-#        print('dis', self.name, r, r < -1e-10)
+    def desactivation_condition(self, positions, reactions):
+        # print('dis', self.name, r, r < -1e-10)
        
         return abs(reactions[0]) < 1e-10
         
-    def Plot(self, bodies_positions=None, strains=None, ax=None,
-             linkages_width=0.01, color='k', intensity_factor = 1e-6):
+    def plot(self, bodies_positions=None, strains=None, ax=None,
+             linkages_width=0.01, color='k', intensity_factor=1e-6):
         x1 = bodies_positions[self.body1]
         x2 = bodies_positions[self.body2]
         y1 = self.body1.y_position
@@ -176,8 +178,7 @@ class UnilateralContact(Linkage):
             yt1 = [y1, y1, ym, ym, ym+h, ym-h]
             xt2 = [x2, xturn2, xturn2, xplate2, xplate2, xplate2]
             yt2 = [y2, y2, ym, ym, ym+h, ym-h]
-        
-            
+
         ax.plot(xt1, yt1, color=color)
         ax.plot(xt2, yt2, color=color)
         ax.text(0.5*(x1+x2), ym-0.5*linkages_width,
@@ -187,24 +188,24 @@ class UnilateralContact(Linkage):
         if strains is not None:
             if self in strains:
                 strain = strains[self][0]
-           
-            
+
                 if strain < 1e-6:
                     ax.add_patch(Arrow(xplate1, ym,
-                     -strain*intensity_factor, 0, linkages_width, color='r'))
+                                       -strain*intensity_factor, 0, linkages_width, color='r'))
                     ax.add_patch(Arrow(xplate2, ym,
-                     strain*intensity_factor, 0, linkages_width, color='r'))
+                                       strain*intensity_factor, 0, linkages_width, color='r'))
                 elif strain > -1e-6:
                     ax.add_patch(Arrow(xplate1 - strain*intensity_factor, ym,
-                     strain*intensity_factor, 0, linkages_width, color='r'))
+                                       strain*intensity_factor, 0, linkages_width, color='r'))
                     ax.add_patch(Arrow(xplate2 + strain*intensity_factor, ym,
-                     -strain*intensity_factor, 0, linkages_width, color='r'))
+                                       -strain*intensity_factor, 0, linkages_width, color='r'))
                 
                 if abs(strain) > 1e-6:
                     ax.text(xplate1, ym+0.5*linkages_width,
                             '{} N'.format(round(strain, 3)), color='k',
                             horizontalalignment='center')
-        
+
+
 class ModelSolvingError(Exception):
     def __init__(self, strain_violation):
 
@@ -213,7 +214,8 @@ class ModelSolvingError(Exception):
 
 #        self.displacement_violation = displacement_violation
         self.strain_violation = strain_violation
-        
+
+
 class ModelConvergenceError(Exception):
     def __init__(self, iters):
 
@@ -222,7 +224,8 @@ class ModelConvergenceError(Exception):
 
 #        self.displacement_violation = displacement_violation
         self.iters = iters
-    
+
+
 class UnidimensionalModel:
     """
     
@@ -235,9 +238,8 @@ class UnidimensionalModel:
         self.loads = loads
         self.imposed_displacements = imposed_displacements
 #        self.nonlinear_imposed_displacements = nonlinear_imposed_displacements
-        
-        
-    def Graph(self, activated_nonlinar_linkages=None):
+
+    def graph(self, activated_nonlinar_linkages=None):
         G = nx.Graph()
         G.add_nodes_from(self.bodies)
         if activated_nonlinar_linkages is None:
@@ -248,12 +250,12 @@ class UnidimensionalModel:
             G.add_edge(linkage.body1, linkage.body2, linear=False)
         return G
     
-    def PlotGraph(self, activated_nonlinar_linkages=None):
+    def plot_graph(self, activated_nonlinar_linkages=None):
         if activated_nonlinar_linkages is None:
             activated_nonlinar_linkages = self.nonlinear_linkages
         plt.figure()
-        G = self.Graph(activated_nonlinar_linkages)
-        pos={}
+        G = self.graph(activated_nonlinar_linkages)
+        pos = {}
         labels = {}
         for body in self.bodies:
             labels[body] = body.name
@@ -273,7 +275,7 @@ class UnidimensionalModel:
 
         nx.draw_networkx_labels(G, pos, labels)
         
-    def IsModelValid(self, activated_nonlinar_linkages):
+    def is_model_valid(self, activated_nonlinar_linkages):
         """
         Check if each Load is connected to at least a force exit (imposed displacement)
         """
@@ -282,7 +284,7 @@ class UnidimensionalModel:
 #        print('i', input_bodies)
 #        print('o', output_bodies)
        
-        G = self.Graph(activated_nonlinar_linkages)
+        G = self.graph(activated_nonlinar_linkages)
         for ib in input_bodies:
             has_exit = False
             for ob in output_bodies:
@@ -293,8 +295,7 @@ class UnidimensionalModel:
             if not has_exit:
                 return False
         return True
-            
-        
+
     def Settings(self, activated_nonlinear_linkages):
         dof = {}
         for ibody, body in enumerate(self.bodies):
@@ -321,7 +322,7 @@ class UnidimensionalModel:
         for linkage in self.linear_linkages+activated_nonlinear_linkages:
             dof_linkage1 = dof[linkage.body1]
             dof_linkage2 = dof[linkage.body2]
-            Ke, Fe,  = linkage.StiffnessMatrices()
+            Ke, Fe,  = linkage.stiffness_matrices()
 #            print(dof_linkage1, Ke.shape)
             if Ke is not None:
                 K[dof_linkage1, dof_linkage1] += Ke[0, 0]
@@ -335,7 +336,6 @@ class UnidimensionalModel:
             
         for load in self.loads:
             F[dof[load.body]] += load.value
-        
 
         i_dof_constraint = ndof
         ic = 0
@@ -348,7 +348,7 @@ class UnidimensionalModel:
         
         for linkage in self.linear_linkages+activated_nonlinear_linkages:
             if linkage.n_constraints > 0:
-                Ce, Fce = linkage.ConstraintsMatrices()
+                Ce, Fce = linkage.constraints_matrices()
                 dof_linkage1 = dof[linkage.body1]
                 dof_linkage2 = dof[linkage.body2]
                 for j in range(linkage.n_constraints):
@@ -372,11 +372,11 @@ class UnidimensionalModel:
 #            print(res)
             x = res[0]
 #            print('res', )
-            residue = npy.dot(A,x)-b
+            residue = npy.dot(A, x)-b
 #            displ_violation = []
             strains_violation = []
             for ires, res in enumerate(npy.abs(residue)):
-#                print(ires, res)
+                # print(ires, res)
                 if ires < ndof:
                     if res > strains_tol:
                         strains_violation.append((ires, res))
@@ -384,7 +384,7 @@ class UnidimensionalModel:
 #                    if res > strains_tol:
 #                        strains_violation.append((ires, res))
 #            print(strains_violation)
-            if len(strains_violation)> 0:
+            if len(strains_violation) > 0:
                 raise ModelSolvingError(strains_violation)
         
         else:
@@ -393,7 +393,7 @@ class UnidimensionalModel:
         displacements = {}
         strains = {}
         for element, dof_element in dof.items():
-#            print(element, dof_element)
+            # print(element, dof_element)
             if dof_element < ndof:
                 displacements[element] = x[dof_element]
             else:
@@ -404,7 +404,7 @@ class UnidimensionalModel:
 
         return UnidimensionalModelResults(self, activated_nonlinear_linkages, displacements, strains)
     
-    def Solve(self, max_iters=100):
+    def solve(self, max_iters=100):
         iters = 0
         activated_nonlinear_linkages = []
         new_activated_nonlinear_linkages = self.nonlinear_linkages[:]
@@ -415,12 +415,12 @@ class UnidimensionalModel:
             
             additional_linkages = []
             
-            while not self.IsModelValid(activated_nonlinear_linkages+additional_linkages):
+            while not self.is_model_valid(activated_nonlinear_linkages + additional_linkages):
                 
-                disactivated_linkages = [l for l in self.nonlinear_linkages if not l in activated_nonlinear_linkages]
+                disactivated_linkages = [l for l in self.nonlinear_linkages if l not in activated_nonlinear_linkages]
                
-                if len(disactivated_linkages)==1:
-                    nla=1
+                if len(disactivated_linkages) == 1:
+                    nla = 1
                 else:
                     nla = random.choice(range(1, len(disactivated_linkages)))
                 additional_linkages = list(random.sample(disactivated_linkages, nla))
@@ -443,7 +443,7 @@ class UnidimensionalModel:
                 if linkage in activated_nonlinear_linkages:
                     # Checking if linkage should be desactivated
                     
-                    if not linkage.DesactivationCondition(positions, reactions):
+                    if not linkage.desactivation_condition(positions, reactions):
                         
                         new_activated_nonlinear_linkages.append(linkage)
                         
@@ -451,31 +451,29 @@ class UnidimensionalModel:
                         disactivated_nonlinear_linkages.append(linkage)
                 else:
                     
-                    if linkage.ActivationCondition(positions, reactions):
+                    if linkage.activation_condition(positions, reactions):
                         new_activated_nonlinear_linkages.append(linkage)
           
             iters += 1
 
         if max_iters == iters:
-#            self.Plot()
-#            self.PlotGraph()
-#            print(self.linear_linkages, self.nonlinear_linkages)
-#            print(self.imposed_displacements)
+            # self.Plot()
+            # self.PlotGraph()
+            # print(self.linear_linkages, self.nonlinear_linkages)
+            # print(self.imposed_displacements)
             raise ModelConvergenceError(iters)
             
         result = self.LinearSolve(activated_nonlinear_linkages)
         return result
-        
-            
-    
-    def Plot(self, activated_nonlinear_linkages = None, bodies_positions=None,
+
+    def plot(self, activated_nonlinear_linkages=None, bodies_positions=None,
              strains={}, ax=None, color='k', linkages_width=0.006, intensity_factor=1e-6):
         
         if activated_nonlinear_linkages is None:
             activated_nonlinear_linkages = self.nonlinear_linkages
         
         if bodies_positions is None:
-            bodies_positions = {b:b.initial_position for b in self.bodies}
+            bodies_positions = {b: b.initial_position for b in self.bodies}
             
         if ax is None:
             fig, ax = plt.subplots()
@@ -486,21 +484,19 @@ class UnidimensionalModel:
             ax.plot([bodies_positions[body]], [body.y_position], 'o', color=color)
             
         for linear_linkages in self.linear_linkages+activated_nonlinear_linkages:
-            linear_linkages.Plot(bodies_positions, strains=strains, ax=ax, color=color,
-                                 linkages_width=linkages_width, intensity_factor=intensity_factor)
+            linear_linkages.plot(bodies_positions, strains=strains, ax=ax, linkages_width=linkages_width, color=color,
+                                 intensity_factor=intensity_factor)
             
         for load in self.loads:
-            load.Plot(bodies_positions, ax=ax, width=linkages_width,
-                      intensity_factor=intensity_factor)
+            load.plot(bodies_positions, ax=ax, intensity_factor=intensity_factor)
             
         for imposed_displacement in self.imposed_displacements:
-            imposed_displacement.Plot(bodies_positions, ax=ax, width=linkages_width,
-                      intensity_factor=intensity_factor)
-            
-            
+            imposed_displacement.plot(bodies_positions, ax=ax, intensity_factor=intensity_factor)
+
         ax.autoscale()
         return fig, ax
-        
+
+
 class UnidimensionalModelResults:
     def __init__(self, model, activated_nonlinear_linkages, displacements, strains):
         self.model = model
@@ -508,14 +504,12 @@ class UnidimensionalModelResults:
         self.displacements = displacements
         self.strains = strains
         
-        self.positions = {b:b.initial_position+displacements[b] for b in self.model.bodies}
+        self.positions = {b: b.initial_position+displacements[b] for b in self.model.bodies}
         
-    def Plot(self, intensity_factor=1e-6):
+    def plot(self, intensity_factor=1e-6):
         fig, ax = plt.subplots()
-        self.model.Plot(self.activated_nonlinear_linkages,
-                        bodies_positions=self.positions,
-                        strains=self.strains,
-                        ax=ax, intensity_factor=intensity_factor)
+        self.model.plot(self.activated_nonlinear_linkages, strains=self.strains, ax=ax,
+                        intensity_factor=intensity_factor)
         
         
     

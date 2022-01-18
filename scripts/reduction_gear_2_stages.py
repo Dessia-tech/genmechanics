@@ -61,9 +61,9 @@ pgs2=pgs22+(pgs23-pgs22)/linalg.norm(pgs23-pgs22)*r2
 dir_axis=npy.array([1,0,0])
 
 dgs1=npy.cross(p1b-p1a,p2a-p1a)
-egs1=genmechanics.geometry.Direction2Euler(dgs1,dir_axis)
+egs1= genmechanics.geometry.direction_2_euler(dgs1, dir_axis)
 dgs2=npy.cross(p3b-p2a,p3a-p2a)
-egs2=genmechanics.geometry.Direction2Euler(dgs2,dir_axis)
+egs2= genmechanics.geometry.direction_2_euler(dgs2, dir_axis)
 
 bearing1a=linkages.BallLinkage(ground,shaft1,p1a,[0,0,0],Ca,Cr,Cwb,'bearing1a')
 bearing1b=linkages.LinearAnnularLinkage(ground,shaft1,p1b,[0,0,0],Cr,Cwb,'bearing1b')
@@ -98,5 +98,5 @@ for l,lv in mech.kinematic_results.items():
 
 #print('wth: ',(1-r1)/r1*(1-r2)/r2*w) # False now
 
-mech.GlobalSankey()
+mech.global_sankey()
 

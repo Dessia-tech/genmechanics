@@ -54,7 +54,7 @@ bearing2b=linkages.LinearAnnularLinkage(ground,shaft2,p2b,egs1,Cr,Cwb,'bearing 2
 dir_axis=npy.array([1,0,0])
 dgs1=npy.cross(p1b-p1a, p2a-p1a)
 dgs1 = [0, 1, 0]
-egs1=genmechanics.geometry.Direction2Euler(dgs1,[0,0,1])
+egs1= genmechanics.geometry.direction_2_euler(dgs1, [0, 0, 1])
 gearset12=linkages.GearSetLinkage(shaft1, shaft2, pgs1, radial_vector=p2a-p1a, axial_vector=dir_axis,
                                   pressure_angle=alpha_gs1, helix_angle=beta_gs1,Cf=Cf, Cv=Cvgs, name='Gear set 1')
 #gearset23=linkages.GearSetLinkage(shaft2,shaft3,[3*L/2,e1*r1+(e1+e2)*(1-r1),0],dir23)
@@ -76,5 +76,4 @@ for l,r in mech.static_results.items():
     
 print('Cth: ',-r1/(1-r1)*C)
 
-
-mech.GlobalSankey()
+mech.global_sankey()

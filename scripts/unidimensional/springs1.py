@@ -39,4 +39,4 @@ sm = springs.SpringModel(bodies, linear_linkages, nonlinear_linkages, loads,
 
 result = sm.SolveLinear()
 
-result.Plot()
+result.plot()
