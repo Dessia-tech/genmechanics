@@ -24,7 +24,7 @@ Mechanism can be rendered with a babylonjs binding.
 
 
 ## Getting started
-- install with pip: pip install genmachanics
+- install with pip: `pip install genmechanics`
 - execute scripts from scripts folder on github: https://github.com/Dessia-tech/genmechanics/tree/master/scripts
 
 
