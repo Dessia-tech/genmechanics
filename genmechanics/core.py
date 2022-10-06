@@ -639,6 +639,9 @@ class Mechanism:
                 other_vars = npy.array([i for i in range(self.n_sdof) if i not in variables])
                 Kr = K[eqs_r[:, None], npy.array(variables)]
                 Fr = F[eqs_r] - npy.dot(K[eqs_r[:, None], other_vars], q[other_vars])
+                print(1000000000000000000000000000000000)
+                print(Kr)
+                print(Fr)
                 q[variables] = linalg.solve(Kr, Fr)
 
             else:
@@ -672,7 +675,6 @@ class Mechanism:
                         nl_eqs.append(f2)
                 f = lambda x: [fi(x) for fi in nl_eqs]
                 xs = fsolve(f, npy.zeros(len(variables)), full_output=0)
-
                 if npy.sum(npy.abs(f(xs))) > 1e-4:
                     raise ModelError('No convergence of nonlinear phenomena solving' + str(npy.sum(npy.abs(f(xs)))))
 

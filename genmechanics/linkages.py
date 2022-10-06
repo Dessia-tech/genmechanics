@@ -468,11 +468,13 @@ class FrictionlessBevelGearLinkage(NonHolonomicLinkage):
 
     def __init__(self, part1, part2, position, radial_vector_gear_part_1, axial_vector_gear_part_1,
                  pressure_angle, mean_spiral_angle, pitch_angle_gear_part_1, hand_of_spiral_gear_part_1='LH',
-                 name='Gear Set Linkage'):
+                 name='Bevel Gear Linkage'):
         self.pressure_angle = pressure_angle  # pressure angle
         self.mean_spiral_angle = mean_spiral_angle
         self.pitch_angle_gear_part_1 = pitch_angle_gear_part_1
         self.hand_of_spiral_gear_part_1 = hand_of_spiral_gear_part_1
+        self.radial_vector_gear_part_1 = radial_vector_gear_part_1
+        self.axial_vector_gear_part_1 = axial_vector_gear_part_1
         normal_pressure_angle = atan(tan(pressure_angle) * cos(mean_spiral_angle))
         print(7888888888)
         print(normal_pressure_angle)
@@ -483,6 +485,7 @@ class FrictionlessBevelGearLinkage(NonHolonomicLinkage):
             hand_of_spiral_coefficient = -1
 
         transversal_vector = npy.cross(axial_vector_gear_part_1, radial_vector_gear_part_1)
+
         euler_angles = geometry.direction_2_euler(transversal_vector, axial_vector_gear_part_1)
 
         static_matrix1 = npy.array([[1, 0, 0],
