@@ -608,21 +608,15 @@ class Mechanism:
 
         # Occurence matrix assembly
         M, K, F = self.occurence_matrix_assembly_static(M, K, F, uloads_parts, loads_parts)
-        print(879787987)
-        print(K)
         neq = 6 * lparts
         neq_linear = neq
         indices_r = list(range(neq))
 
         # behavior equations of linkages
         M, K = self.behavior_equation_of_linkages_static(M, K, nonlinear_eq, neq, neq_linear, indices_r)
-        print(9999999)
-        print(K)
 
         # behavior equations of unknowns loads
         M, K = self.behavior_equation_of_unknows_loads_static(M, K, nonlinear_eq, neq, neq_linear, indices_r)
-        print(10000)
-        print(K)
         return M, K, F, nonlinear_eq, indices_r
 
     def construction_matrix_q_static(self, M, K, F, nonlinear_eq, indices_r, resolution_order):
@@ -644,9 +638,7 @@ class Mechanism:
                 other_vars = npy.array([i for i in range(self.n_sdof) if i not in variables])
                 Kr = K[eqs_r[:, None], npy.array(variables)]
                 Fr = F[eqs_r] - npy.dot(K[eqs_r[:, None], other_vars], q[other_vars])
-                print(1000000000000000000000000000000000)
-                print(Kr)
-                print(Fr)
+
                 q[variables] = linalg.solve(Kr, Fr)
 
             else:

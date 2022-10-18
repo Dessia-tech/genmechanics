@@ -476,9 +476,6 @@ class FrictionlessBevelGearLinkage(NonHolonomicLinkage):
         self.radial_vector_gear_part_1 = radial_vector_gear_part_1
         self.axial_vector_gear_part_1 = axial_vector_gear_part_1
         normal_pressure_angle = atan(tan(pressure_angle) * cos(mean_spiral_angle))
-        print(7888888888)
-        print(normal_pressure_angle)
-        print(cos(mean_spiral_angle))
         if hand_of_spiral_gear_part_1 == 'LH':
             hand_of_spiral_coefficient = 1
         else:

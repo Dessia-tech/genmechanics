@@ -64,7 +64,7 @@ gearset12 = linkages.FrictionlessBevelGearLinkage(shaft1, shaft2, center_gearing
                                                   pressure_angle=alpha_gs1,
                                                   mean_spiral_angle=mean_spiral_angle,
                                                   pitch_angle_gear_part_1=pitch_angle_gear_part_1,
-                                                  name='Gear set 1')
+                                                  name='Bevel Gear')
 #gearset23=linkages.GearSetLinkage(shaft2,shaft3,[3*L/2,e1*r1+(e1+e2)*(1-r1),0],dir23)
 
 imposed_speeds = [(bearing1a, 0, w)]
