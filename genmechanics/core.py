@@ -10,7 +10,7 @@ from genmechanics import geometry, tools
 from scipy import linalg
 from scipy.optimize import fsolve
 
-from dessia_common import DessiaObject
+from dessia_common.core import DessiaObject
 
 import volmdlr as vm
 import volmdlr.edges as edges

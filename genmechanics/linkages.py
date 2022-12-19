@@ -8,7 +8,7 @@ Created on Wed Nov 16 13:14:34 2016
 import numpy as npy
 from math import cos, sin, tan, atan
 import genmechanics.geometry as geometry
-from dessia_common import DessiaObject
+from dessia_common.core import DessiaObject
 
 
 class Linkage:
