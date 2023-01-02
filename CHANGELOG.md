@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Global: update with new version of volmdlr ( copy argument in rotation)
 * Global: Change dessia_common import with the new version
+* Linkages: Error in GearSetLinkage equation with helical angle
 
 ## [0.1.3]
 ### Changed
