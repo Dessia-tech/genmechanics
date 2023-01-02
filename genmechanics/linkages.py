@@ -491,7 +491,7 @@ class FrictionlessBevelGearLinkage(NonHolonomicLinkage):
                                     [0, 0, 0], [0, 0, 0], [0, 0, 0]])
 
         static_matrix2 = -static_matrix1
-        static_behavior_occurence_matrix = npy.array([[1, 1, 0],[1, 0, 1]])
+        static_behavior_occurence_matrix = npy.array([[1, 1, 0], [1, 0, 1]])
         static_behavior_nonlinear_eq_indices = [0, 1]
         static_behavior_linear_eq = npy.array([])
         static_behavior_nonlinear_eq = [lambda x, w, v: (tan(normal_pressure_angle) *
@@ -508,12 +508,30 @@ class FrictionlessBevelGearLinkage(NonHolonomicLinkage):
                                      static_behavior_linear_eq, static_behavior_nonlinear_eq,
                                      directions, static_require_kinematic, name)
 
-    def change_parameters(self, pressure_angle, helix_angle):
+    def change_parameters(self, pressure_angle, mean_spiral_angle, pitch_angle_gear_part_1,
+                          hand_of_spiral_gear_part_1='LH'):
         self.pressure_angle = pressure_angle
-        self.helix_angle = helix_angle
-        self.static_matrix2 = npy.array([[1, 0], [tan(helix_angle), 0], [0, -1], [0, 0], [0, 0], [0, 0]])
-        self.static_matrix1 = - self.static_matrix2
-        self.static_behavior_nonlinear_eq = [lambda x, w, v: tan(pressure_angle) * abs(x[0]) / cos(helix_angle) + x[1]]
+        self.mean_spiral_angle = mean_spiral_angle
+        self.pitch_angle_gear_part_1 = pitch_angle_gear_part_1
+        self.hand_of_spiral_gear_part_1 = hand_of_spiral_gear_part_1
+        self.static_matrix1 = npy.array([[1, 0, 0],
+                                         [0, tan(pitch_angle_gear_part_1), 1 / tan(pitch_angle_gear_part_1)],
+                                         [0, 1, -1],
+                                         [0, 0, 0], [0, 0, 0], [0, 0, 0]])
+
+        self.static_matrix2 = -self.static_matrix1
+        normal_pressure_angle = atan(tan(pressure_angle) * cos(mean_spiral_angle))
+        if hand_of_spiral_gear_part_1 == 'LH':
+            hand_of_spiral_coefficient = 1
+        else:
+            hand_of_spiral_coefficient = -1
+        self.static_behavior_nonlinear_eq = [lambda x, w, v: (tan(normal_pressure_angle) *
+                                                              cos(pitch_angle_gear_part_1)) *
+                                                             abs(x[0]) / cos(mean_spiral_angle) - x[1],
+                                             lambda x, w, v: x[0] * hand_of_spiral_coefficient *
+                                                             sin(mean_spiral_angle) * sin(pitch_angle_gear_part_1) - x[
+                                                                 1] *
+                                                             cos(mean_spiral_angle)]
 
 # class FrictionlessGearSetLinkage(NonHolonomicLinkage):
 #     """
