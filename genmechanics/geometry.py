@@ -56,6 +56,7 @@ def direction_2_euler(u, v=npy.random.random(3)):
     R = npy.zeros((3, 3))
     R[:, 0] = u
     v = v - npy.dot(u, v) * u
+
     v = v / linalg.norm(v)
     w = npy.cross(u, v)
     R[:, 1] = v

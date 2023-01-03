@@ -173,7 +173,7 @@ class RevoluteLinkage(Linkage):
         """
 
         def part1_basis_f(q):
-            return part1_basis.rotation(part1_basis.u, q[0], copy=True)
+            return part1_basis.rotation(part1_basis.u, q[0])
 
         def part2_basis_f(q):
             return part2_basis
