@@ -141,7 +141,7 @@ class RevoluteLinkage(HolonomicLinkage):
         static_behavior_linear_eq = npy.array([])
         static_behavior_nonlinear_eq = [lambda x, w, v: abs(
             w[0]) / w[0] * (Ca * abs(x[0]) + Cr * (x[1] ** 2 + x[2] ** 2) ** 0.5 + Cw * w[0]) + x[3] if w[0] != 0 else
-        x[3]]
+            x[3]]
         kinematic_matrix = npy.array([[1], [0], [0], [0], [0], [0]])
         static_require_kinematic = True
         HolonomicLinkage.__init__(self, part1, part2, position, euler_angles,
@@ -156,7 +156,7 @@ class RevoluteLinkage(HolonomicLinkage):
         self.Cw = Cw
         self.static_behavior_nonlinear_eq = [lambda x, w, v: abs(
             w[0]) / w[0] * (Ca * abs(x[0]) + Cr * (x[1] ** 2 + x[2] ** 2) ** 0.5 + Cw * w[0]) + x[3] if w[0] != 0 else
-        x[3]]
+            x[3]]
 
 
 # class CylindricalLinkage(Linkage):
@@ -222,7 +222,7 @@ class BallLinkage(HolonomicLinkage):
         static_behavior_linear_eq = npy.array([])
         static_behavior_nonlinear_eq = [lambda x, w, v: abs(
             w[0]) / w[0] * (Ca * abs(x[0]) + Cr * (x[1] ** 2 + x[2] ** 2) ** 0.5 + Cw * w[0]) + x[3] if w[0] != 0 else
-        x[3]]
+            x[3]]
         kinematic_matrix = npy.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [0, 0, 0], [0, 0, 0], [0, 0, 0]])
         static_require_kinematic = True
         HolonomicLinkage.__init__(self, part1, part2, position, euler_angles,
@@ -237,7 +237,7 @@ class BallLinkage(HolonomicLinkage):
         self.Cw = Cw
         self.static_behavior_nonlinear_eq = [lambda x, w, v: abs(
             w[0]) / w[0] * (Ca * abs(x[0]) + Cr * (x[1] ** 2 + x[2] ** 2) ** 0.5 + Cw * w[0]) + x[3] if w[0] != 0 else
-        x[3]]
+            x[3]]
 
 
 class LinearAnnularLinkage(HolonomicLinkage):
@@ -496,10 +496,10 @@ class FrictionlessBevelGearLinkage(NonHolonomicLinkage):
         static_behavior_linear_eq = npy.array([])
         static_behavior_nonlinear_eq = [lambda x, w, v: (tan(normal_pressure_angle) *
                                                          cos(pitch_angle_gear_part_1)) *
-                                                        abs(x[0]) / cos(mean_spiral_angle) - x[1],
+                                        abs(x[0]) / cos(mean_spiral_angle) - x[1],
                                         lambda x, w, v: x[0] * hand_of_spiral_coefficient *
-                                                        sin(mean_spiral_angle) * sin(pitch_angle_gear_part_1) - x[1] *
-                                                        cos(mean_spiral_angle)]
+                                        sin(mean_spiral_angle) * sin(pitch_angle_gear_part_1) - x[1] *
+                                        cos(mean_spiral_angle)]
         directions = [npy.array([1, 0, 0])]
         static_require_kinematic = True
         NonHolonomicLinkage.__init__(self, part1, part2, position, euler_angles,
@@ -527,11 +527,11 @@ class FrictionlessBevelGearLinkage(NonHolonomicLinkage):
             hand_of_spiral_coefficient = -1
         self.static_behavior_nonlinear_eq = [lambda x, w, v: (tan(normal_pressure_angle) *
                                                               cos(pitch_angle_gear_part_1)) *
-                                                             abs(x[0]) / cos(mean_spiral_angle) - x[1],
+                                             abs(x[0]) / cos(mean_spiral_angle) - x[1],
                                              lambda x, w, v: x[0] * hand_of_spiral_coefficient *
-                                                             sin(mean_spiral_angle) * sin(pitch_angle_gear_part_1) - x[
+                                             sin(mean_spiral_angle) * sin(pitch_angle_gear_part_1) - x[
                                                                  1] *
-                                                             cos(mean_spiral_angle)]
+                                             cos(mean_spiral_angle)]
 
 # class FrictionlessGearSetLinkage(NonHolonomicLinkage):
 #     """
