@@ -523,7 +523,6 @@ class Mechanism:
 
                         nonlinear_eq[neq + i] = lambda x, v=v, w=w, fct=fct: fct(x, w, v)
 
-
                 # Updating counters
                 neq += neq_linkage
                 neq_linear += neq_linear_linkage
@@ -667,7 +666,6 @@ class Mechanism:
                         f2 = lambda x, indices_r=indices_r, K=K, F=F, eq=eq, q=q, other_vars=other_vars: npy.dot(
                             K[indices_r[eq], variables], x) - F[indices_r[eq]] + npy.dot(K[indices_r[eq], other_vars],
                                                                                          q[other_vars])
-
 
                         nl_eqs.append(f2)
                 f = lambda x: [fi(x) for fi in nl_eqs]
