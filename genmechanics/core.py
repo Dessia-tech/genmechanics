@@ -10,7 +10,7 @@ from genmechanics import geometry, tools
 from scipy import linalg
 from scipy.optimize import fsolve
 
-from dessia_common import DessiaObject
+from dessia_common.core import DessiaObject
 
 import volmdlr as vm
 import volmdlr.edges as edges
@@ -450,6 +450,7 @@ class Mechanism:
                 if neq_linear_load > 0:
                     Ke = npy.zeros((neq_linear_load, self.n_sdof))
                     for indof, ndof in enumerate(self.sdof[load]):
+
                         Ke[neq_linear:neq_linear + 6, ndof] += load.static_behavior_linear_eq[:, indof]
                     K = npy.vstack([K, Ke])
 
@@ -485,9 +486,11 @@ class Mechanism:
 
                 # Adding linear equations to System matrix K
                 neq_linear_linkage = linkage.static_behavior_linear_eq.shape[0]
+
                 if neq_linear_linkage > 0:
                     Ke = npy.zeros((neq_linear_linkage, self.n_sdof))
                     for indof, ndof in enumerate(self.sdof[linkage]):
+
                         Ke[neq_linear:neq_linear + 6, ndof] += linkage.static_behavior_linear_eq[:, indof]
                     K = npy.vstack([K, Ke])
                     indices_r.extend(range(neq_linear, neq_linear + neq_linear_linkage))
@@ -504,6 +507,7 @@ class Mechanism:
                         w, v = 0, 0
                     for i, fct in zip(linkage.static_behavior_nonlinear_eq_indices,
                                       linkage.static_behavior_nonlinear_eq):
+
                         nonlinear_eq[neq + i] = lambda x, v=v, w=w, fct=fct: fct(x, w, v)
                 else:
                     if linkage.static_require_kinematic:
@@ -516,6 +520,7 @@ class Mechanism:
 
                     for i, fct in zip(linkage.static_behavior_nonlinear_eq_indices,
                                       linkage.static_behavior_nonlinear_eq):
+
                         nonlinear_eq[neq + i] = lambda x, v=v, w=w, fct=fct: fct(x, w, v)
 
                 # Updating counters
@@ -611,7 +616,6 @@ class Mechanism:
 
         # behavior equations of unknowns loads
         M, K = self.behavior_equation_of_unknows_loads_static(M, K, nonlinear_eq, neq, neq_linear, indices_r)
-
         return M, K, F, nonlinear_eq, indices_r
 
     def construction_matrix_q_static(self, M, K, F, nonlinear_eq, indices_r, resolution_order):
@@ -621,6 +625,7 @@ class Mechanism:
             #            print(eqs,variables)
             linear = True
             linear_eqs = []
+
             for eq in eqs:
                 try:
                     nonlinear_eq[eq]
@@ -639,9 +644,11 @@ class Mechanism:
 
                 nl_eqs = []
                 other_vars = npy.array([i for i in range(self.n_sdof) if i not in variables])
+
                 for eq in eqs:
                     try:
                         f1 = nonlinear_eq[eq]
+
                         vars_func = [i for i in range(self.n_sdof) if M[eq, i]]
 
                         def f2(x, f1=f1, vars_func=vars_func, variables=variables, q=q):
@@ -656,7 +663,6 @@ class Mechanism:
                         nl_eqs.append(f2)
                     except KeyError:
                         # lambdification of linear equations
-
                         f2 = lambda x, indices_r=indices_r, K=K, F=F, eq=eq, q=q, other_vars=other_vars: npy.dot(
                             K[indices_r[eq], variables], x) - F[indices_r[eq]] + npy.dot(K[indices_r[eq], other_vars],
                                                                                          q[other_vars])
@@ -664,7 +670,6 @@ class Mechanism:
                         nl_eqs.append(f2)
                 f = lambda x: [fi(x) for fi in nl_eqs]
                 xs = fsolve(f, npy.zeros(len(variables)), full_output=0)
-
                 if npy.sum(npy.abs(f(xs))) > 1e-4:
                     raise ModelError('No convergence of nonlinear phenomena solving' + str(npy.sum(npy.abs(f(xs)))))
 
@@ -758,7 +763,9 @@ class Mechanism:
                                                                                                     linkage.kinematic_matrix[
                                                                                                         3:, :])) > 1e-10
                     Me = npy.vstack([Me1, Me2])
+
                     for indof, ndof in enumerate(self.kdof[linkage]):
+
                         M[6 * il:6 * il + 6, ndof] += Me[:, indof]
 
                     Ke1 = npy.dot(P, linkage.kinematic_matrix[:3, :])
@@ -1032,9 +1039,9 @@ class Mechanism:
 #         """
 #
 #
-##        s+='var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3({}, {}, {}), scene);'.format(*center)
+# s+='var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3({}, {}, {}), scene);'.format(*center)
 #        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., {}, new BABYLON.Vector3({}, {}, {}), scene);\n'.format(4*length,*center)
-##        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., 15, new BABYLON.Vector3(0,0,0), scene);'
+# s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., 15, new BABYLON.Vector3(0,0,0), scene);'
 #        s+='camera.panningSensibility={};\n'.format(30)
 #        s+='camera.pinchPrecision={};\n'.format(20)
 #        s+='camera.wheelPrecision={};\n'.format(20)
@@ -1049,7 +1056,7 @@ class Mechanism:
 # // Let's try our built-in 'sphere' shape. Params: name, subdivisions, size, scene
 # var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
 # // Move the sphere upward 1/2 its height
-##         sphere.position.y = 1;
+# sphere.position.y = 1;
 # // Let's try our built-in 'ground' shape. Params: name, width, depth, subdivisions, scene
 # var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
 #
