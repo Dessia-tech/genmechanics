@@ -1039,9 +1039,9 @@ class Mechanism:
 #         """
 #
 #
-##        s+='var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3({}, {}, {}), scene);'.format(*center)
+# s+='var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3({}, {}, {}), scene);'.format(*center)
 #        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., {}, new BABYLON.Vector3({}, {}, {}), scene);\n'.format(4*length,*center)
-##        s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., 15, new BABYLON.Vector3(0,0,0), scene);'
+# s+='var camera = new BABYLON.ArcRotateCamera("ArcRotateCamera", 0., 0., 15, new BABYLON.Vector3(0,0,0), scene);'
 #        s+='camera.panningSensibility={};\n'.format(30)
 #        s+='camera.pinchPrecision={};\n'.format(20)
 #        s+='camera.wheelPrecision={};\n'.format(20)
@@ -1056,7 +1056,7 @@ class Mechanism:
 # // Let's try our built-in 'sphere' shape. Params: name, subdivisions, size, scene
 # var sphere = BABYLON.Mesh.CreateSphere("sphere1", 16, 2, scene);
 # // Move the sphere upward 1/2 its height
-##         sphere.position.y = 1;
+# sphere.position.y = 1;
 # // Let's try our built-in 'ground' shape. Params: name, width, depth, subdivisions, scene
 # var ground = BABYLON.Mesh.CreateGround("ground1", 6, 6, 2, scene);
 #

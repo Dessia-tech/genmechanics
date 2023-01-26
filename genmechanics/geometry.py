@@ -47,7 +47,7 @@ def transfer_matrix_2_euler(R):
         else:
             theta = math.pi
             psi = -math.atan2(R[1, 0], R[0, 0])
-    return(npy.array([psi, theta, phi]))
+    return (npy.array([psi, theta, phi]))
 
 
 def direction_2_euler(u, v=npy.random.random(3)):
