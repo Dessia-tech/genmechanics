@@ -1414,5 +1414,4 @@ def babylon_script_line(line, color=(1, 1, 1), name='line', type_='line',
         s += '{}.color = new BABYLON.Color3{};\n'.format(name, tuple(color))
     if parent is not None:
         s += f'{name}.parent = {parent};\n'
-
     return s
