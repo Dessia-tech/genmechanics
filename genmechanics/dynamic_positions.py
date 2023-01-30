@@ -1280,10 +1280,10 @@ class MechanismConfigurations(DessiaObject):
         for part in self.mechanism.parts:
             meshes_string += 'var part_children = [];\n'
             lines = part.wireframe_lines(part_points[part])
-            meshes_string += lines[0].babylon_script(name='part_parent', color=colors[part])
+            meshes_string += babylon_script_line(line=lines[0], name='part_parent', color=colors[part])
             meshes_string += 'parts_parent.push(part_parent);\n'
             for line in lines[1:]:
-                meshes_string += line.babylon(color=colors[part], parent='part_parent')
+                meshes_string += babylon_script_line(line=line, color=colors[part], parent='part_parent')
 #                meshes_string += 'part_meshes.push(line);\n'
 
 #            # Adding interest points
@@ -1302,7 +1302,8 @@ class MechanismConfigurations(DessiaObject):
         if plot_instant_rotation_axis:
             for part in self.mechanism.parts:
                 line = vm.edges.LineSegment3D(-0.5 * vm.X3D, 0.5 * vm.X3D)
-                meshes_string += line.babylon_script(name='rotation_axis', color=colors[part], type_='dashed')
+                meshes_string += babylon_script_line(line=line, name='rotation_axis', color=colors[part],
+                                                     type_='dashed')
                 meshes_string += 'parts_parent.push(rotation_axis);\n'
 
         linkages_string = ''
@@ -1393,3 +1394,24 @@ class MechanismConfigurations(DessiaObject):
             file.write(script)
 
         webbrowser.open('file://' + os.path.realpath(page))
+
+
+def babylon_script_line(line, color=(1, 1, 1), name='line', type_='line',
+                        parent=None):
+    if type_ in ['line', 'dashed']:
+        s = 'var myPoints = [];\n'
+        s += 'var point1 = new BABYLON.Vector3({},{},{});\n'.format(
+            *line.start)
+        s += 'myPoints.push(point1);\n'
+        s += 'var point2 = new BABYLON.Vector3({},{},{});\n'.format(
+            *line.end)
+        s += 'myPoints.push(point2);\n'
+        if type_ == 'line':
+            s += 'var {} = BABYLON.MeshBuilder.CreateLines("lines", {{points: myPoints}}, scene);\n'.format(
+                name)
+        elif type_ == 'dashed':
+            s += f'var {name} = BABYLON.MeshBuilder.CreateDashedLines("lines", {{points: myPoints, dashNb:20}}, scene);'
+        s += '{}.color = new BABYLON.Color3{};\n'.format(name, tuple(color))
+    if parent is not None:
+        s += f'{name}.parent = {parent};\n'
+    return s
