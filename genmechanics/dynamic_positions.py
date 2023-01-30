@@ -1396,33 +1396,21 @@ class MechanismConfigurations(DessiaObject):
         webbrowser.open('file://' + os.path.realpath(page))
 
 
-def babylon_script_line(line, color=(1, 1, 1), name='line', type_='line',
+def babylon_script_line(line, color=(1, 1, 1), name='line',
                         parent=None):
-    if type_ in ['line', 'dashed']:
-        s = 'var myPoints = [];\n'
-        s += 'var point1 = new BABYLON.Vector3({},{},{});\n'.format(
-            *line.start)
-        s += 'myPoints.push(point1);\n'
-        s += 'var point2 = new BABYLON.Vector3({},{},{});\n'.format(
-            *line.end)
-        s += 'myPoints.push(point2);\n'
-        if type_ == 'line':
-            s += 'var {} = BABYLON.MeshBuilder.CreateLines("lines", {{points: myPoints}}, scene);\n'.format(
-                name)
-        elif type_ == 'dashed':
-            s += f'var {name} = BABYLON.MeshBuilder.CreateDashedLines("lines", {{points: myPoints, dashNb:20}}, scene);'
-        s += '{}.color = new BABYLON.Color3{};\n'.format(name, tuple(color))
-    elif type_ == 'tube':
-        radius = 0.03 * line.start.point_distance(line.end)
-        s = 'var points = [new BABYLON.Vector3({},{},{}), new BABYLON.Vector3({},{},{})];\n'.format(
-            *line.start, *line.end)
-        s += 'var {} = BABYLON.MeshBuilder.CreateTube("frame_U", {{path: points, radius: {}}}, {});'.format(
-            name, radius, parent)
-    #            s += 'line.material = red_material;\n'
 
-    else:
-        raise NotImplementedError
+    s = 'var myPoints = [];\n'
+    s += 'var point1 = new BABYLON.Vector3({},{},{});\n'.format(
+        *line.start)
+    s += 'myPoints.push(point1);\n'
+    s += 'var point2 = new BABYLON.Vector3({},{},{});\n'.format(
+        *line.end)
+    s += 'myPoints.push(point2);\n'
 
+    s += 'var {} = BABYLON.MeshBuilder.CreateLines("lines", {{points: myPoints}}, scene);\n'.format(
+        name)
+
+    s += '{}.color = new BABYLON.Color3{};\n'.format(name, tuple(color))
     if parent is not None:
         s += f'{name}.parent = {parent};\n'
 
