@@ -2,6 +2,7 @@
 import os
 
 scripts = ['bevel_gears+gear.py',
+           'reduction_gear_2_stages.py',
            'dynamic_positions/crank_rod.py',
            'unidimensional/double_ball_bearings.py'
             ]
