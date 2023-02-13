@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1]
+
+### Fixes
+* Geometry: fix method transfer_matrix_2_euler() in the case of R[2, 2] is really near and superior to 1
+
 ## [0.3.0]
 
 ### New features
