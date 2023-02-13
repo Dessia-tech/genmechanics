@@ -33,7 +33,7 @@ def euler_2_transfer_matrix(psi, theta, phi):
 
 
 def transfer_matrix_2_euler(R):
-    if ((R[2, 2] != 1) & (R[2, 2] != -1)):
+    if ((R[2, 2] < 1) & (R[2, 2] > -1)):
         # R[2,2]=R[2,2]/abs(R[2,2])
         theta = math.acos(R[2, 2])
         psi = math.atan2(R[2, 0] / math.sin(theta), R[2, 1] / math.sin(theta))
@@ -41,7 +41,7 @@ def transfer_matrix_2_euler(R):
 
     else:
         phi = 0
-        if R[2, 2] == 1:
+        if R[2, 2] >= 1:
             theta = 0
             psi = math.atan2(R[1, 0], R[0, 0])
         else:
